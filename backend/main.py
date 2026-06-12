@@ -1,5 +1,15 @@
+import os
+import time as _time
 from contextlib import asynccontextmanager
 from pathlib import Path
+
+# เซิร์ฟเวอร์ cloud (Render ฯลฯ) เป็น UTC — ร้านอยู่ไทย: บังคับโซนเวลาไทยทั้งโปรเซส
+# ไม่งั้น "วันนี้" ของ backend ช้ากว่าหน้าร้าน 7 ชม. (การ์ดนับ 0 ทั้งที่มีนัด ฯลฯ)
+os.environ.setdefault("TZ", "Asia/Bangkok")
+try:
+    _time.tzset()  # มีผลบน Linux — Windows (เครื่อง dev) ไม่มีฟังก์ชันนี้ แต่เวลา local ถูกอยู่แล้ว
+except AttributeError:
+    pass
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
