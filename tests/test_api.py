@@ -7,6 +7,7 @@ from pathlib import Path
 TEST_DB = Path(__file__).resolve().parent / "test_mms.db"
 os.environ["MMS_DB_URL"] = f"sqlite:///{TEST_DB}"
 os.environ["MMS_OWNER_PASS"] = "Owner@2468"  # รหัสเฉพาะตอนเทส — ของจริงตั้งใน env ของเครื่อง/แพลตฟอร์ม
+os.environ["MMS_SEED_SHOWCASE"] = "0"  # เทสเริ่มจาก DB สะอาด ไม่เอาข้อมูลโชว์เดโม่
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pytest
