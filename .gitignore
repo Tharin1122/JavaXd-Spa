@@ -1,0 +1,18 @@
+# ---- ข้อมูลจริง / ความลับ — ห้ามขึ้น repo ----
+*.db
+*.db-journal
+.env
+.env.*
+!.env.example
+
+# ---- python ----
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# ---- editor/os ----
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

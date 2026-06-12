@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 21c-4.5 0-8-2.6-8-6 0 0 2.4.4 4 1.6C10.7 11.7 12 9 12 9s1.3 2.7 4 7.6c1.6-1.2 4-1.6 4-1.6 0 3.4-3.5 6-8 6Z' fill='%236c5ce7'/></svg>">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JavaXd · ตารางงานหมอนวด</title>
+<link rel="stylesheet" href="../assets/theme.css?v=1">
+<style>
+.g-name{min-width:210px}
+.summ{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px}
+@media(max-width:1100px){.summ{grid-template-columns:repeat(2,1fr)}}
+.scard{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow);display:flex;align-items:center;gap:12px}
+.scard .util{margin-left:auto;text-align:right}
+.scard .util b{font-size:18px}
+.ring{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;flex:0 0 46px}
+.ring i{width:34px;height:34px;border-radius:50%;background:#fff;display:grid;place-items:center;font-size:11px;font-weight:700}
+/* week / month views */
+.wk{display:grid;grid-template-columns:210px repeat(7,1fr);min-width:780px}
+.wk .h{padding:10px 8px;font-size:12px;font-weight:600;color:var(--ink-3);text-align:center;border-bottom:1px solid var(--line)}
+.wk .h.today{color:var(--brand-700)}
+.wk .nm-c{display:flex;align-items:center;gap:10px;padding:12px;border-bottom:1px solid var(--line);font-weight:600;font-size:13px;cursor:pointer}
+.wk .nm-c:hover{background:var(--brand-soft)}
+.wk .c{border-bottom:1px solid var(--line);border-left:1px dashed var(--line);display:grid;place-items:center;padding:10px 4px;cursor:pointer;transition:.12s}
+.wk .c:hover{background:var(--brand-soft)}
+.wk .pill{font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px}
+.mo{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;min-width:680px}
+.mo .dh{text-align:center;font-size:12px;font-weight:600;color:var(--ink-3);padding:4px 0}
+.mo .dc{border:1px solid var(--line);border-radius:12px;min-height:74px;padding:8px 10px;cursor:pointer;transition:.12s;background:var(--card-2)}
+.mo .dc:hover{border-color:var(--brand);box-shadow:var(--shadow)}
+.mo .dc.today{border-color:var(--brand);background:var(--brand-soft)}
+.mo .dc.empty{visibility:hidden}
+.mo .dn{font-size:12.5px;font-weight:700}
+.mo .db{font-size:11px;color:var(--ink-3);margin-top:5px}
+.mo .db b{color:var(--brand-700)}
+</style>
+</head>
+<body data-title="ตารางงานหมอนวด">
+
+<template id="page">
+  <div class="page-h">
+    <div class="ttl"><h2>ตารางงานหมอนวด</h2><p>มุมมองรวมตารางงานและอัตราการใช้งานของหมอนวดทุกคน</p></div>
+    <div class="sp">
+      <div class="flex ac g12">
+        <button class="icon-btn" style="width:38px;height:38px" data-i="chevL" onclick="shiftDay(-1)"></button>
+        <b style="font-size:14px" id="schDate">17 พฤษภาคม 2567</b>
+        <button class="icon-btn" style="width:38px;height:38px" data-i="chevR" onclick="shiftDay(1)"></button>
+      </div>
+      <div class="seg" id="vseg"><button class="on">วัน</button><button>สัปดาห์</button><button>เดือน</button></div>
+      <button class="btn btn-pri" onclick="BS.openBooking()" data-i="plus">เพิ่มงาน</button>
+    </div>
+  </div>
+
+  <div class="summ" id="summ"></div>
+
+  <div class="card card-pad">
+    <div class="card-h"><h3>ไทม์ไลน์รายวัน</h3>
+      <div class="sp flex g16 ac">
+        <span class="online"><span class="d"></span>ออนไลน์ 4</span>
+        <span class="busy online"><span class="d"></span>ไม่ว่าง 1</span>
+      </div>
+    </div>
+    <div class="gantt" id="gantt"></div>
+    <div class="svlegend" id="svlegend"></div>
+  </div>
+</template>
+
+<script>window.BASE='../';window.PAGE='schedule';</script>
+<script>if(!localStorage.getItem('th_auth'))location.href=(window.BASE||'')+'login.html';</script>
+<script>
+window.PAGE_INIT=function(){
+  document.querySelectorAll('[data-i]').forEach(e=>{const t=e.textContent.trim();e.innerHTML=svg(e.dataset.i)+(t?'<span>'+t+'</span>':'')});
+
+  const T0=9,T1=22,RANGE=T1-T0;
+  const SV={thai:['นวดไทย','#8b7cf0'],oil:['นวดน้ำมัน','#3ea8c9'],aroma:['อโรมา','#e6a23c'],prakob:['ประคบ','#7cc47a'],foot:['นวดเท้า','#f08aa8'],shoulder:['คอบ่าไหล่','#f0b07a'],rest:['พัก / ว่าง','#b9bfd0']};
+  let rows=[]; let G=null;
+  const catKey={'นวดไทย':'thai','นวดน้ำมัน':'oil','นวดน้ำมันอโรมา':'oil','อโรมา':'aroma','ประคบ':'prakob','นวดเท้า':'foot','คอบ่าไหล่':'shoulder'};
+  const hr=(iso)=>{const d=new Date(iso);return d.getHours()+d.getMinutes()/60;};
+
+  document.getElementById('svlegend').innerHTML=Object.values(SV).map(s=>`<div class="it"><span class="d" style="background:${s[1]}"></span>${s[0]}</div>`).join('');
+
+  function renderSumm(){
+    document.getElementById('summ').innerHTML=rows.map((r,i)=>{
+      const c=r.util>=80?'#ef5d6b':r.util>=65?'#f5a623':'#22b07d';
+      return `<div class="scard" style="cursor:pointer" onclick="thProfile&&thProfile(${i})">${av(r.n,40)}<div><div style="font-weight:600">${r.n}</div><div class="${r.st}" style="font-size:11px"><span class="d"></span>${r.st==='online'?'ออนไลน์':r.st==='busy'?'ไม่ว่าง':'พัก'}</div></div>
+        <div class="util"><div class="ring" style="background:conic-gradient(${c} ${r.util}%,#edeff6 0)"><i style="color:${c}">${r.util}%</i></div></div></div>`;
+    }).join('')||'<div style="color:var(--ink-3);padding:20px">ยังไม่มีหมอนวดประจำการ</div>';
+  }
+
+  async function fetchRows(dateIso){
+    const sch=await API.get('/dashboard/schedule'+(dateIso?('?date='+dateIso):''));
+    const nr=(sch.therapists||[]).map(th=>{
+      const items=(th.items||[]);
+      const bookedHrs=items.reduce((s,i)=>s+(hr(i.endTime)-hr(i.startTime)),0);
+      const util=Math.min(100,Math.round(bookedHrs/RANGE*100));
+      return {n:th.displayName,thId:th.id,sv:[...new Set(items.map(i=>i.serviceCategory).filter(Boolean))].join(', '),
+        st:th.currentStatus===0?'online':th.currentStatus===1?'busy':'off',util,
+        b:items.map(i=>[hr(i.startTime),hr(i.endTime),i.serviceName,i.customerName||'',catKey[i.serviceCategory]||'thai',i.id,i.source,i.walkInId||null]).filter(b=>b[1]>9&&b[0]<22)};
+    });
+    rows=nr;window.SCH=rows;renderSumm();   // อัปเดตการ์ดสรุปตามวันด้วย
+    return nr;
+  }
+  (async()=>{
+    try{ await fetchRows(); }catch(e){console.error('schedule',e);renderSumm();}
+    G=initGantt({mount:'gantt',rows,SV,base:'../',posHref:'pos.html',nameW:'210px',dateEl:'schDate',onDate:fetchRows});
+    window.G=G;
+  })();
+
+  /* มุมมองสัปดาห์ / เดือน — จากการจองจริง (/booking) */
+  const THDOW=['จ','อ','พ','พฤ','ศ','ส','อา'];
+  const ymd=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  let ALLBK=null;
+  async function loadAllBookings(){if(ALLBK)return ALLBK;try{const r=await API.get('/booking?pageSize=500');ALLBK=(r&&r.items)||r||[];}catch(e){ALLBK=[];}return ALLBK;}
+  async function renderWeek(){
+    const bk=await loadAllBookings();const today=new Date();
+    const monday=new Date(today);monday.setDate(today.getDate()-((today.getDay()+6)%7));
+    const days=[];for(let i=0;i<7;i++){const d=new Date(monday);d.setDate(monday.getDate()+i);days.push(d);}
+    // นับงานต่อหมอนวด(ชื่อ) ต่อวัน
+    const cnt={};bk.forEach(b=>{const dt=b.bookingDate&&ymd(new Date(b.bookingDate));if(!dt)return;(b.items||[]).forEach(it=>{const th=(it.therapist&&it.therapist.displayName)||'_';cnt[th+'|'+dt]=(cnt[th+'|'+dt]||0)+1;});});
+    let h='<div class="wk"><div class="h" style="text-align:left;padding-left:12px">หมอนวด</div>';
+    days.forEach((d,i)=>{const isT=ymd(d)===ymd(today);h+=`<div class="h${isT?' today':''}">${THDOW[i]} ${d.getDate()}${isT?' · วันนี้':''}</div>`;});
+    rows.forEach((r,ri)=>{h+=`<div class="nm-c" onclick="thProfile(${ri})">${av(r.n,32)}${r.n}</div>`;
+      days.forEach(d=>{const n=cnt[r.n+'|'+ymd(d)]||0;const c=n>=5?'#ef5d6b':n>=3?'#f5a623':n>0?'#22b07d':'#c2c7d6';
+        h+=`<div class="c" onclick="monthDay('${ymd(d)}')"><span class="pill" style="background:${c}1f;color:${c}">${n||'—'}</span></div>`;});});
+    document.getElementById('gantt').innerHTML=h+'</div>';
+  }
+  async function renderMonth(){
+    const bk=await loadAllBookings();const today=new Date();const y=today.getFullYear(),mo=today.getMonth();
+    const firstDow=new Date(y,mo,1).getDay();const dim=new Date(y,mo+1,0).getDate();
+    const cnt={};bk.forEach(b=>{const dt=b.bookingDate&&new Date(b.bookingDate);if(dt&&dt.getFullYear()===y&&dt.getMonth()===mo)cnt[dt.getDate()]=(cnt[dt.getDate()]||0)+1;});
+    const dows=['อา','จ','อ','พ','พฤ','ศ','ส'];
+    let h='<div class="mo">'+dows.map(d=>`<div class="dh">${d}</div>`).join('');
+    for(let i=0;i<firstDow;i++)h+='<div class="dc empty"></div>';
+    for(let d=1;d<=dim;d++){const n=cnt[d]||0;const isT=d===today.getDate();
+      h+=`<div class="dc${isT?' today':''}" onclick="monthDay('${y}-${String(mo+1).padStart(2,'0')}-${String(d).padStart(2,'0')}')"><div class="dn">${d}${isT?' · วันนี้':''}</div><div class="db"><b>${n}</b> การจอง</div></div>`;}
+    document.getElementById('gantt').innerHTML=h+'</div>';
+  }
+  window.monthDay=async function(iso){
+    BS.modal({title:'การจองวันที่ '+API.fmtDate(iso),sub:'กำลังโหลด...',w:440,body:'<div style="padding:20px;text-align:center;color:var(--ink-3)">กำลังโหลด...</div>'});
+    let list=[];try{list=await API.get('/booking?date='+iso)||[];}catch{}if(!Array.isArray(list))list=list.items||[];
+    BS.modal({title:'การจองวันที่ '+API.fmtDate(iso),sub:list.length?list.length+' การจอง':'ยังไม่มีการจอง',w:440,
+      body:list.length?list.map(b=>{const nm=(b.customer&&b.customer.displayName)||'-';return `<div class="flex ac jb" style="padding:9px 0;border-bottom:1px solid var(--line)"><div class="flex ac g8">${av(nm,32)}<div><div style="font-weight:600;font-size:13px">${nm}</div><div class="sub" style="font-size:11.5px">${(b.items&&b.items[0]&&b.items[0].service&&b.items[0].service.name)||b.bookingNo||''}</div></div></div><span class="badge b-purple">${(b.startTime||'').slice(0,5)}</span></div>`}).join(''):'<div style="text-align:center;padding:20px 0;color:var(--ink-3);font-size:13px">ว่างทั้งวัน · รับจองได้</div>',
+      foot:`<button class="btn btn-ghost" onclick="BS.closeModal()">ปิด</button><button class="btn btn-pri" onclick="BS.closeModal();BS.openBooking()">${svg('plus')} จองวันนี้</button>`});
+  };
+
+  document.querySelectorAll('#vseg button').forEach((b,i)=>b.onclick=()=>{
+    document.querySelectorAll('#vseg button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+    if(i===0)G&&G.render();else if(i===1)renderWeek();else renderMonth();
+  });
+};
+</script>
+<script src="../assets/gantt.js?v=3h"></script>
+<script src="../assets/api.js?v=2"></script>
+<script src="../assets/shell.js?v=8"></script>
+</body>
+</html>

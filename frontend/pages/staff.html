@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 21c-4.5 0-8-2.6-8-6 0 0 2.4.4 4 1.6C10.7 11.7 12 9 12 9s1.3 2.7 4 7.6c1.6-1.2 4-1.6 4-1.6 0 3.4-3.5 6-8 6Z' fill='%236c5ce7'/></svg>">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JavaXd · หมอนวด / พนักงาน</title>
+<link rel="stylesheet" href="../assets/theme.css?v=1">
+<style>
+.staff-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:30px}
+@media(max-width:1280px){.staff-grid{grid-template-columns:repeat(2,1fr)}}
+.stf{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:18px;text-align:center;transition:.15s}
+.stf:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg)}
+.stf .av-w{position:relative;width:72px;margin:4px auto 10px}
+.stf .stt{position:absolute;bottom:2px;right:2px;width:16px;height:16px;border-radius:50%;border:3px solid #fff}
+.stf-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.stf-stats b{font-size:16px}.stf-stats span{font-size:10.5px;color:var(--ink-3)}
+.skills{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-bottom:14px;min-height:24px}
+</style>
+</head>
+<body data-title="หมอนวด / พนักงาน">
+
+<template id="page">
+  <div class="page-h">
+    <div class="ttl"><h2>หมอนวด / พนักงาน</h2><p>ข้อมูลทีมงาน สถานะ ความสามารถ และผลงาน</p></div>
+    <div class="sp">
+      <button class="btn btn-ghost" onclick="commReport()" data-i="money">ค่ามือ & ค่าคอม</button>
+      <button class="btn btn-ghost" onclick="manageShift()" data-i="clock">จัดกะ</button>
+      <button class="btn btn-pri" onclick="addStaff()" data-i="plus">เพิ่มพนักงาน</button>
+    </div>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat"><div class="row1"><div class="ic ic-purple" data-i="badge"></div><span class="tt">พนักงานทั้งหมด</span></div><div class="val">14 <small>คน</small></div><div class="row3"><span class="from">หมอนวด 11 · แอดมิน 3</span></div></div>
+    <div class="stat"><div class="row1"><div class="ic ic-green" data-i="check"></div><span class="tt">เข้างานวันนี้</span></div><div class="val">9 <small>คน</small></div><div class="row3"><span class="from">ออนไลน์ตอนนี้ 5</span></div></div>
+    <div class="stat"><div class="row1"><div class="ic ic-orange" data-i="spa"></div><span class="tt">คิวรวมวันนี้</span></div><div class="val">27 <small>คิว</small></div><div class="row3"><span class="from">เฉลี่ย 3 คิว/คน</span></div></div>
+    <div class="stat"><div class="row1"><div class="ic ic-blue" data-i="star"></div><span class="tt">เรตติ้งทีมเฉลี่ย</span></div><div class="val">4.9</div><div class="row3"><span class="from">จากลูกค้า</span></div></div>
+  </div>
+
+  <h3 style="font-size:16px;font-weight:700;margin-bottom:16px">หมอนวดประจำการวันนี้</h3>
+  <div class="staff-grid" id="staff-grid"></div>
+
+  <div class="card card-pad">
+    <div class="card-h"><h3>ตารางพนักงานทั้งหมด</h3><a class="sp link" href="schedule.html">ดูตารางงาน →</a></div>
+    <table class="tbl" id="stf-tbl"></table>
+  </div>
+</template>
+
+<script>window.BASE='../';window.PAGE='staff';</script>
+<script>if(!localStorage.getItem('th_auth'))location.href=(window.BASE||'')+'login.html';</script>
+<script>
+window.PAGE_INIT=function(){
+  document.querySelectorAll('[data-i]').forEach(e=>{const t=e.textContent.trim();e.innerHTML=svg(e.dataset.i)+(t?'<span>'+t+'</span>':'')});
+  const STT={online:'#22b07d',busy:'#f5a623',off:'#c2c7d6'};
+  const SKILL=['Junior Therapist','Senior Therapist','Expert Therapist'];
+  // currentStatus enum: 0 Available,1 Occupied,2 Break,3 Leave,4 OffDuty,5 Offline
+  const stKey=(n)=>n===0?'online':n===1?'busy':'off';
+  // ไม่ใช้คำว่า ออนไลน์/ออฟไลน์ — ใช้คำที่สื่อความว่าง/ไม่ว่างแทน
+  const stLabel=(n)=>['ว่าง','ไม่ว่าง (กำลังนวด)','พักเบรก','ลางาน','เลิกงานแล้ว','ยังไม่เข้างาน'][n]||'-';
+  let THER=[]; let DASH=null; let ROLES=[]; let RATINGS={};
+
+  function render(){
+    // top grid: หมอนวดประจำการ (online/busy)
+    const onduty=THER.filter(t=>t.currentStatus!==5&&t.currentStatus!==4&&t.isActive);
+    document.getElementById('staff-grid').innerHTML=(onduty.length?onduty:THER).slice(0,8).map(s=>{const k=stKey(s.currentStatus);return `
+      <div class="stf">
+        <div class="av-w">${av(s.displayName,72)}<span class="stt" style="background:${STT[k]}"></span></div>
+        <div style="font-weight:700;font-size:16px">${s.displayName}</div>
+        <div class="sub" style="font-size:12px">${SKILL[s.skillLevel||0]}</div>
+        <div class="skills"><span class="badge ${k==='online'?'b-green':k==='busy'?'b-orange':'b-gray'}">${stLabel(s.currentStatus)}</span></div>
+        <div class="stf-stats">
+          <div><b>${s.experienceYears||0}</b><div><span>ปีประสบการณ์</span></div></div>
+          <div><b>${RATINGS[s.id]?'★'+RATINGS[s.id].avg:'—'}</b><div><span>${RATINGS[s.id]?RATINGS[s.id].count+' รีวิว':'ยังไม่มีรีวิว'}</span></div></div>
+          <div><b>${SKILL[s.skillLevel||0].split(' ')[0]}</b><div><span>ระดับ</span></div></div>
+        </div>
+        <div class="flex ac jb" style="font-size:13px"><span class="muted">เบอร์โทร</span><b>${s.phone||'—'}</b></div>
+        <button class="btn btn-soft btn-sm" style="width:100%;margin-top:12px" onclick="staffProfile('${s.id}')">ดูโปรไฟล์</button>
+      </div>`}).join('')||'<div style="color:var(--ink-3);padding:30px">ยังไม่มีพนักงาน</div>';
+
+    // ตารางทั้งหมด
+    document.getElementById('stf-tbl').innerHTML=
+      '<thead><tr><th>พนักงาน</th><th>ระดับ</th><th>สถานะ</th><th>เบอร์โทร</th><th>ประสบการณ์</th><th></th></tr></thead><tbody>'+
+      (THER.length?THER.map(a=>{const k=stKey(a.currentStatus);return `<tr>
+        <td><div class="cell-u">${av(a.displayName,36)}<div class="nm">${a.displayName}</div></div></td>
+        <td>${SKILL[a.skillLevel||0]}</td>
+        <td><span class="${k==='online'?'online':k==='busy'?'busy online':'offline online'}" style="cursor:pointer" onclick="changeStatus('${a.id}')"><span class="d"></span>${stLabel(a.currentStatus)}</span></td>
+        <td class="sub">${a.phone||'—'}</td>
+        <td>${a.experienceYears||0} ปี</td>
+        <td><div class="row-act"><button data-i="eye" onclick="staffProfile('${a.id}')"></button><button data-i="edit" onclick="editStaff('${a.id}')"></button></div></td>
+      </tr>`}).join(''):'<tr><td colspan="6" style="text-align:center;color:var(--ink-3);padding:30px">ยังไม่มีพนักงาน</td></tr>')+'</tbody>';
+    document.querySelectorAll('#stf-tbl [data-i]').forEach(e=>e.innerHTML=svg(e.dataset.i));
+
+    // stat cards (จริง)
+    const stats=document.querySelectorAll('.stat-grid .stat');
+    const setStat=(el,val,unit,from)=>{if(!el)return;const v=el.querySelector('.val');if(v)v.innerHTML=val+(unit?' <small>'+unit+'</small>':'');const f=el.querySelector('.from');if(f)f.textContent=from;};
+    const avail=THER.filter(t=>t.currentStatus===0).length;
+    const avgExp=THER.length?(THER.reduce((s,t)=>s+(t.experienceYears||0),0)/THER.length).toFixed(1):0;
+    setStat(stats[0],THER.length,'คน','ในระบบ');
+    setStat(stats[1],avail,'คน','พร้อมรับงานตอนนี้');
+    setStat(stats[2],DASH?DASH.queue.totalToday:'—','คิว','คิววันนี้ทั้งร้าน');
+    const rvVals=Object.values(RATINGS);const totC=rvVals.reduce((s,r)=>s+r.count,0);
+    const teamRating=totC?(rvVals.reduce((s,r)=>s+r.avg*r.count,0)/totC).toFixed(2):null;
+    setStat(stats[3],teamRating?'★ '+teamRating:'—','',teamRating?'จาก '+totC+' รีวิวจริง':'ยังไม่มีรีวิว');
+    const lbls=document.querySelectorAll('.stat-grid .tt');
+    if(lbls[1])lbls[1].textContent='ว่าง / พร้อมรับงาน';
+    if(lbls[3])lbls[3].textContent='เรตติ้งทีมเฉลี่ย';
+    // การ์ดคลิกดูรายละเอียดได้ (reuse modal เดียวกับหน้าอื่น)
+    const stName=(s)=>s===0?'ว่าง':s===1?'กำลังบริการ':'พัก/ออฟไลน์';
+    BS.statDetails([
+      {title:'พนักงานทั้งหมด · '+THER.length+' คน',sub:'สถานะปัจจุบันรายคน',rows:THER.map(t=>[t.displayName+(t.code?' · '+t.code:''),stName(t.currentStatus)])},
+      {title:'ว่าง / พร้อมรับงาน · '+avail+' คน',sub:'มอบหมายคิวได้ทันที',rows:avail?THER.filter(t=>t.currentStatus===0).map(t=>[t.displayName,'✓ ว่าง','#178a61']):[['ไม่มีใครว่างตอนนี้','—']]},
+      {title:'คิววันนี้ทั้งร้าน',sub:'จากแดชบอร์ดจริง',rows:DASH?[['รอคิว',DASH.queue.waiting],['กำลังบริการ',DASH.queue.inService],['จบงานแล้ว',DASH.queue.completed],['รวมวันนี้',DASH.queue.totalToday,'var(--brand-700)']]:[['ยังไม่มีข้อมูล','—']]},
+      {title:'เรตติ้งทีม',sub:'คะแนนรีวิวจริงรายคน',rows:totC?THER.filter(t=>RATINGS[t.id]).map(t=>[t.displayName,'★ '+RATINGS[t.id].avg.toFixed(1)+' ('+RATINGS[t.id].count+')']):[['ยังไม่มีรีวิว','—']]},
+    ]);
+  }
+  window.stRender=render;
+
+  async function load(){
+    try{
+      THER=await API.get('/therapist')||[];
+      try{DASH=await API.get('/dashboard');}catch{}
+      try{ROLES=await API.get('/user/roles')||[];}catch{}
+      try{const rv=await API.get('/review/therapists')||[];RATINGS={};rv.forEach(r=>RATINGS[r.therapistId]={avg:r.average,count:r.count});}catch{}
+      render();
+    }catch(e){console.error('staff',e);document.getElementById('stf-tbl').innerHTML='<tbody><tr><td style="text-align:center;color:var(--red);padding:30px">โหลดข้อมูลพนักงานไม่สำเร็จ</td></tr></tbody>';}
+  }
+  load();
+  if(window.RT)RT.onUpdate(function(){clearTimeout(window._stRt);window._stRt=setTimeout(load,700);});
+
+  window.staffProfile=async function(id){
+    const s=THER.find(x=>x.id===id)||{};const k=stKey(s.currentStatus);
+    BS.modal({title:'โปรไฟล์พนักงาน',sub:SKILL[s.skillLevel||0],w:520,
+      body:`<div class="flex ac g16" style="margin-bottom:18px">
+          <div style="position:relative">${av(s.displayName,64)}<span style="position:absolute;bottom:2px;right:2px;width:15px;height:15px;border-radius:50%;border:3px solid #fff;background:${STT[k]}"></span></div>
+          <div style="flex:1"><div style="font-weight:700;font-size:18px">${s.displayName||''}</div><div class="sub" style="font-size:13px">${SKILL[s.skillLevel||0]} · ${s.experienceYears||0} ปี</div></div>
+          <span class="badge ${k==='online'?'b-green':k==='busy'?'b-orange':'b-gray'}">${stLabel(s.currentStatus)}</span></div>
+        <div class="grid-3" style="gap:10px;margin-bottom:18px">
+          <div class="stat" style="padding:13px"><div class="val" style="font-size:20px">${s.experienceYears||0}</div><div class="from" style="font-size:11px">ปีประสบการณ์</div></div>
+          <div class="stat" style="padding:13px"><div class="val" style="font-size:18px">${s.code||'—'}</div><div class="from" style="font-size:11px">รหัสพนักงาน</div></div>
+          <div class="stat" style="padding:13px"><div class="val" style="font-size:16px">${s.phone||'—'}</div><div class="from" style="font-size:11px">เบอร์โทร</div></div></div>
+        <div id="profSkills" style="font-size:13px;color:var(--ink-3)">กำลังโหลดความถนัด...</div>`,
+      foot:`<button class="btn btn-ghost" onclick="changeStatus('${id}')">${svg('clock')} เปลี่ยนสถานะ</button>
+        <button class="btn btn-ghost" onclick="manageLeave('${id}')">${svg('cal')} ขอลางาน</button>
+        <button class="btn btn-pri" onclick="editStaff('${id}')">${svg('edit')} แก้ไขข้อมูล</button>`});
+    try{const d=await API.get('/therapist/'+id);const sk=(d.therapistServices||[]).map(ts=>ts.service&&ts.service.name).filter(Boolean);
+      const el=document.getElementById('profSkills');if(!el)return;
+      let html='<div style="font-weight:600;color:var(--ink-1);margin-bottom:6px">บริการที่ทำได้</div><div class="skills" style="justify-content:flex-start">'+(sk.length?sk.map(n=>`<span class="badge b-purple">${n}</span>`).join(''):'<span class="muted">ยังไม่ได้กำหนด</span>')+'</div>';
+      // บัญชีล็อกอิน — รีเซ็ตรหัส + ผูก LINE ด้วย QR (ถ้ามี user account)
+      if(d.userId){html+=`<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line)">
+        <div style="font-weight:600;color:var(--ink-1);margin-bottom:8px">บัญชีเข้าระบบ & LINE</div>
+        <div class="flex g8">
+          <button class="btn btn-soft btn-sm" onclick="resetPw('${d.userId}','${(s.displayName||'').replace(/'/g,'')}')">${svg('gear')} รีเซ็ตรหัสผ่าน</button>
+          <button class="btn btn-pri btn-sm" onclick="linkLineQR('${d.userId}','${(s.displayName||'').replace(/'/g,'')}')">${svg('line')} ส่ง QR ผูก LINE</button>
+        </div></div>`;}
+      else{html+=`<div style="margin-top:14px;padding:10px 13px;background:var(--card-2);border-radius:10px;font-size:12px;color:var(--ink-3)">พนักงานนี้ยังไม่มีบัญชีเข้าระบบ — สร้างได้ตอน "เพิ่มพนักงาน" (ติ๊กสร้างบัญชีล็อกอิน)</div>`;}
+      el.innerHTML=html;
+    }catch{}
+  };
+
+  // รีเซ็ตรหัสผ่านให้พนักงาน (เจ้าของ/ผู้จัดการตั้งรหัสชั่วคราว)
+  window.resetPw=function(userId,name){
+    BS.modal({title:'รีเซ็ตรหัสผ่าน · '+name,sub:'ตั้งรหัสชั่วคราวให้พนักงาน',w:400,
+      body:`<div class="field"><label>รหัสผ่านใหม่</label><input id="rpPass" type="text" placeholder="อย่างน้อย 6 ตัว"></div>
+        <div class="sub" style="font-size:12px">พนักงานใช้รหัสนี้ล็อกอินด้วย username เดิม แล้วเปลี่ยนเองภายหลังได้</div>`,
+      foot:`<button class="btn btn-ghost" onclick="BS.closeModal()">ยกเลิก</button><button class="btn btn-pri" onclick="window._doResetPw('${userId}')">${svg('check')} ตั้งรหัสใหม่</button>`});
+    window._doResetPw=async(uid)=>{const p=document.getElementById('rpPass').value;if(p.length<6){BS.toast('อย่างน้อย 6 ตัว','x');return;}
+      try{await API.post('/user/'+uid+'/set-password',{newPassword:p});BS.closeModal();BS.toast('ตั้งรหัสผ่านใหม่แล้ว','check');}catch(e){BS.toast('ไม่สำเร็จ: '+e.message,'x');}};
+  };
+
+  // ส่ง QR ผูก LINE — สร้าง link token แล้วแสดง QR ให้พนักงานสแกน (ผูก LINE + เข้าระบบได้)
+  window.linkLineQR=async function(userId,name){
+    BS.modal({title:'ผูก LINE · '+name,sub:'ให้พนักงานสแกน QR นี้ด้วยมือถือ',w:420,body:'<div style="padding:30px;text-align:center;color:var(--ink-3)">กำลังสร้างลิงก์...</div>'});
+    let res;try{res=await API.post('/auth/link-token',{userId});}catch(e){BS.toast('สร้างลิงก์ไม่สำเร็จ: '+e.message,'x');BS.closeModal();return;}
+    const card=document.getElementById('genCard');const body=card.querySelector('.modal-b');
+    body.innerHTML=`<div style="text-align:center">
+        <div id="qrBox" style="width:200px;height:200px;margin:6px auto 14px;display:grid;place-items:center;border:1px solid var(--line);border-radius:14px;background:#fff"></div>
+        <div class="sub" style="font-size:12.5px">สแกนด้วยกล้องมือถือ / LINE → ล็อกอินด้วย LINE เพื่อผูกบัญชีของ <b>${name}</b></div>
+        <div style="margin-top:10px;font-size:11.5px;color:var(--ink-3);word-break:break-all">หรือเปิดลิงก์: <a href="${res.liffUrl}" target="_blank" style="color:var(--brand-700)">${res.liffUrl}</a></div>
+        <div id="qrStatus" style="margin-top:10px;font-size:12.5px;color:var(--ink-3)">⏳ รอสแกน...</div>
+      </div>`;
+    // วาด QR ฝั่งเบราว์เซอร์ (ไม่ส่ง token ออกนอกเครื่อง)
+    const draw=()=>{try{new QRCode(document.getElementById('qrBox'),{text:res.liffUrl,width:188,height:188,correctLevel:QRCode.CorrectLevel.M});}catch(e){document.getElementById('qrBox').textContent='โหลด QR ไม่สำเร็จ';}};
+    if(window.QRCode)draw();else{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';sc.onload=draw;document.head.appendChild(sc);}
+    // poll สถานะ — ปิดอัตโนมัติเมื่อผูกสำเร็จ
+    const poll=setInterval(async()=>{try{const st=await API.get('/auth/link-status/'+res.token);
+      if(st.status==='linked'){clearInterval(poll);const el=document.getElementById('qrStatus');if(el)el.innerHTML='<span style="color:#178a61;font-weight:600">✓ ผูก LINE สำเร็จแล้ว!</span>';BS.toast('ผูก LINE ให้ '+name+' แล้ว','check');}
+      else if(st.status==='expired'){clearInterval(poll);const el=document.getElementById('qrStatus');if(el)el.textContent='ลิงก์หมดอายุ — กดสร้างใหม่';}
+    }catch(e){}},3000);
+    const mo=new MutationObserver(()=>{if(!document.getElementById('genModal').classList.contains('show')){clearInterval(poll);mo.disconnect();}});
+    mo.observe(document.getElementById('genModal'),{attributes:true});
+  };
+
+  window.changeStatus=function(id){
+    const s=THER.find(x=>x.id===id)||{};
+    const opts=[[0,'ว่าง'],[1,'ไม่ว่าง (กำลังนวด)'],[2,'พักเบรก'],[3,'ลางาน'],[4,'เลิกงานแล้ว'],[5,'ยังไม่เข้างาน']];
+    BS.modal({title:'เปลี่ยนสถานะ · '+s.displayName,sub:'อัปเดตสถานะการทำงานแบบเรียลไทม์',w:380,
+      body:`<div class="field"><label>สถานะ</label><select id="csSt">${opts.map(o=>`<option value="${o[0]}"${o[0]===s.currentStatus?' selected':''}>${o[1]}</option>`).join('')}</select></div>`,
+      foot:`<button class="btn btn-ghost" style="margin-right:auto" onclick="manageLeave('${id}')">${svg('cal')} ขอลางาน</button><button class="btn btn-ghost" onclick="BS.closeModal()">ยกเลิก</button><button class="btn btn-pri" onclick="window._saveSt('${id}')">${svg('check')} บันทึก</button>`});
+    window._saveSt=async(tid)=>{const v=parseInt(document.getElementById('csSt').value);
+      try{await API.patch('/therapist/'+tid+'/status',{status:v,reason:null});BS.closeModal();BS.toast('อัปเดตสถานะแล้ว');await load();}catch(e){BS.toast('อัปเดตไม่สำเร็จ: '+e.message,'x');}};
+  };
+
+  // ขอลางาน — ลาทั้งวัน หรือลาบางช่วง (ระบุเวลาเริ่ม-สิ้นสุด) · บันทึกลง DB จริง + อนุมัติทันที
+  window.manageLeave=function(id){
+    const s=THER.find(x=>x.id===id)||{};const today=(d=>new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10))(new Date());
+    BS.modal({title:'ขอลางาน · '+s.displayName,sub:'ลาทั้งวัน หรือระบุช่วงเวลาที่ลา',w:440,
+      body:`<div class="field"><label>วันที่ลา</label><input id="lvDate" type="date" value="${today}"></div>
+        <label class="flex ac jb" style="padding:10px 13px;border:1px solid var(--line);border-radius:11px;margin-bottom:12px;cursor:pointer"><span style="font-weight:500;font-size:13.5px">ลาทั้งวัน</span><input id="lvFull" type="checkbox" checked style="width:18px;height:18px;accent-color:var(--brand)" onchange="document.getElementById('lvTimes').style.display=this.checked?'none':'grid'"></label>
+        <div id="lvTimes" class="grid2" style="display:none"><div class="field"><label>เวลาเริ่มลา</label><input id="lvStart" type="time" value="12:00"></div>
+          <div class="field"><label>ถึงเวลา</label><input id="lvEnd" type="time" value="13:00"></div></div>
+        <div class="field"><label>เหตุผล (ไม่บังคับ)</label><input id="lvReason" placeholder="เช่น ธุระส่วนตัว, ลาป่วย"></div>
+        <div id="lvList" style="margin-top:6px"></div>`,
+      foot:`<button class="btn btn-ghost" onclick="BS.closeModal()">ยกเลิก</button><button class="btn btn-pri" onclick="window._saveLeave('${id}')">${svg('check')} บันทึกการลา</button>`});
+    // โหลดประวัติการลาที่มี
+    (async()=>{try{const lv=await API.get('/therapist/'+id+'/leaves')||[];const el=document.getElementById('lvList');
+      const stT={0:'รออนุมัติ',1:'อนุมัติแล้ว',2:'ไม่อนุมัติ'};const stC={0:'b-orange',1:'b-green',2:'b-red'};
+      if(el&&lv.length)el.innerHTML='<div class="sub" style="font-size:12px;margin-bottom:6px">การลาที่บันทึกไว้</div>'+lv.slice(0,4).map(l=>`<div class="flex ac jb" style="padding:7px 0;border-bottom:1px solid var(--line);font-size:12.5px"><span>${API.fmtDate(l.leaveDate)} · ${l.leaveType===0||l.leaveType==='FullDay'?'ทั้งวัน':((l.startTime||'').slice(0,5)+'-'+(l.endTime||'').slice(0,5))}</span><span class="badge ${stC[l.status]||'b-gray'}">${stT[l.status]||l.status}</span></div>`).join('');
+    }catch(e){}})();
+    window._saveLeave=async(tid)=>{const date=document.getElementById('lvDate').value;const full=document.getElementById('lvFull').checked;
+      if(!date){BS.toast('เลือกวันที่','x');return;}
+      const body={leaveDate:date,leaveType:full?0:1,reason:document.getElementById('lvReason').value.trim()||null,
+        startTime:full?null:document.getElementById('lvStart').value+':00',endTime:full?null:document.getElementById('lvEnd').value+':00'};
+      try{const r=await API.post('/therapist/'+tid+'/leaves',body);
+        try{if(r&&r.id)await API.patch('/therapist/'+tid+'/leaves/'+r.id+'/approve');}catch(_){}
+        BS.closeModal();BS.toast('บันทึกการลาแล้ว'+(full?' (ทั้งวัน)':' '+document.getElementById('lvStart').value+'-'+document.getElementById('lvEnd').value),'check');await load();
+      }catch(e){BS.toast('บันทึกไม่สำเร็จ: '+e.message,'x');}};
+  };
+
+  const roleTh={Owner:'เจ้าของร้าน',Manager:'ผู้จัดการ',Reception:'แอดมิน/รีเซป',Therapist:'หมอนวด'};
+  function stForm(s){s=s||{};const isNew=!s.id;
+    return `<div class="grid2"><div class="field"><label>ชื่อ (แสดงผล)</label><input id="sfName" value="${(s.displayName||'').replace(/"/g,'&quot;')}" placeholder="เช่น อ้อม"></div>
+        <div class="field"><label>รหัสพนักงาน</label><input id="sfCode" value="${s.code||''}" placeholder="เช่น TH01"></div></div>
+      <div class="grid2"><div class="field"><label>เบอร์โทร</label><input id="sfPhone" value="${s.phone||''}" placeholder="08x-xxx-xxxx"></div>
+        <div class="field"><label>ประสบการณ์ (ปี)</label><input id="sfExp" type="number" value="${s.experienceYears||0}"></div></div>
+      <div class="field"><label>ระดับฝีมือ</label><select id="sfSkill">${SKILL.map((k,i)=>`<option value="${i}"${i===(s.skillLevel||0)?' selected':''}>${k}</option>`).join('')}</select></div>
+      ${isNew?`<label class="flex ac jb" style="padding:11px 13px;border:1px solid var(--line);border-radius:11px;margin:8px 0;cursor:pointer;background:var(--card-2)"><span style="font-weight:500;font-size:13.5px">สร้างบัญชีล็อกอินให้พนักงานนี้ <span class="sub" style="font-weight:400">(เพื่อจำกัดสิทธิ์ตาม Role)</span></span><input id="sfLogin" type="checkbox" style="width:18px;height:18px;accent-color:var(--brand)" onchange="document.getElementById('sfAcct').style.display=this.checked?'block':'none'"></label>
+      <div id="sfAcct" style="display:none">
+        <div class="field"><label>บทบาท (Role) — กำหนดสิทธิ์การเข้าถึง</label><select id="sfRole">${ROLES.map(r=>`<option value="${r.id}"${r.name==='Therapist'?' selected':''}>${roleTh[r.name]||r.name}</option>`).join('')||'<option value="">— ไม่มีบทบาท —</option>'}</select></div>
+        <div class="grid2" style="margin-top:14px;gap:14px"><div class="field" style="margin-bottom:0"><label style="margin-bottom:6px;display:block">ชื่อผู้ใช้ (username)</label><input id="sfUser" placeholder="อย่างน้อย 3 ตัว a-z 0-9 _"></div>
+          <div class="field" style="margin-bottom:0"><label style="margin-bottom:6px;display:block">รหัสผ่านชั่วคราว</label><input id="sfPass" type="text" placeholder="อย่างน้อย 6 ตัว"></div></div>
+      </div>`:''}`;
+  }
+  async function saveStaff(id){
+    const name=document.getElementById('sfName').value.trim();if(!name){BS.toast('กรอกชื่อ','x');return;}
+    const code=document.getElementById('sfCode').value.trim()||null;
+    const phone=document.getElementById('sfPhone').value.trim()||null;
+    const exp=parseInt(document.getElementById('sfExp').value)||0;
+    const skill=parseInt(document.getElementById('sfSkill').value);
+    // โหมดแก้ไข = แก้โปรไฟล์หมอนวด
+    if(id){const body={displayName:name,code,phone,lineUserId:null,avatarUrl:null,experienceYears:exp,skillLevel:skill};
+      try{await API.put('/therapist/'+id,body);BS.closeModal();BS.toast('บันทึกแล้ว');await load();}catch(e){BS.toast('บันทึกไม่สำเร็จ: '+e.message,'x');}return;}
+    // โหมดเพิ่ม + สร้างบัญชีล็อกอิน (มี Role)
+    const wantLogin=document.getElementById('sfLogin')&&document.getElementById('sfLogin').checked;
+    if(wantLogin){
+      const roleId=document.getElementById('sfRole').value;const uname=document.getElementById('sfUser').value.trim();const pass=document.getElementById('sfPass').value;
+      if(!roleId){BS.toast('เลือกบทบาท','x');return;}
+      if(uname.length<3){BS.toast('username อย่างน้อย 3 ตัว','x');return;}
+      if(pass.length<6){BS.toast('รหัสผ่านอย่างน้อย 6 ตัว','x');return;}
+      try{const u=await API.post('/user',{displayName:name,phone,roleId,username:uname,password:pass});
+        await API.post('/therapist/from-user',{userId:u.id,code,experienceYears:exp,skillLevel:skill});
+        BS.closeModal();BS.toast('เพิ่มพนักงาน + บัญชีล็อกอินแล้ว ('+uname+')','check');await load();
+      }catch(e){BS.toast('ไม่สำเร็จ: '+e.message,'x');}return;
+    }
+    // เพิ่มเฉพาะโปรไฟล์หมอนวด (ไม่มีบัญชีล็อกอิน)
+    try{await API.post('/therapist',{displayName:name,code,phone,lineUserId:null,avatarUrl:null,experienceYears:exp,skillLevel:skill});BS.closeModal();BS.toast('เพิ่มพนักงานแล้ว');await load();}catch(e){BS.toast('บันทึกไม่สำเร็จ: '+e.message,'x');}
+  }
+  window.addStaff=function(){
+    BS.modal({title:'เพิ่มพนักงานใหม่',sub:'ลงทะเบียนหมอนวดเข้าทีม',w:520,body:stForm(null),
+      foot:`<button class="btn btn-ghost" onclick="BS.closeModal()">ยกเลิก</button><button class="btn btn-pri" onclick="window._saveStf()">${svg('check')} บันทึก</button>`});
+    window._saveStf=()=>saveStaff(null);
+  };
+  window.editStaff=function(id){
+    const s=THER.find(x=>x.id===id)||{};
+    BS.modal({title:'แก้ไขข้อมูล · '+s.displayName,sub:'ข้อมูลพื้นฐานและระดับฝีมือ',w:520,body:stForm(s),
+      foot:`<button class="btn btn-ghost" style="color:var(--red);border-color:#f4ccd0;margin-right:auto" onclick="window._delStf('${id}')">${svg('trash')} ลบ</button><button class="btn btn-ghost" onclick="BS.closeModal()">ยกเลิก</button><button class="btn btn-pri" onclick="window._saveStf()">${svg('check')} บันทึก</button>`});
+    window._saveStf=()=>saveStaff(id);
+    window._delStf=async(tid)=>{try{await API.del('/therapist/'+tid);BS.closeModal();BS.toast('ลบพนักงานแล้ว');await load();}catch(e){BS.toast('ลบไม่สำเร็จ','x');}};
+  };
+  // จัดกะการทำงาน — เชื่อม /therapist/{id}/schedules จริง
+  window.manageShift=function(){
+    const days=['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+    BS.modal({title:'จัดกะการทำงาน',sub:'เลือกพนักงานแล้วกำหนดวัน/เวลาเข้างาน (บันทึกลงระบบจริง)',w:520,
+      body:`<div class="field"><label>เลือกพนักงาน</label><select id="shTh">${THER.map(t=>`<option value="${t.id}">${t.displayName}</option>`).join('')}</select></div>
+        <div id="shDays" style="display:flex;flex-direction:column;gap:4px;margin-top:6px">กำลังโหลด...</div>`,
+      foot:`<button class="btn btn-ghost" onclick="BS.closeModal()">ยกเลิก</button><button class="btn btn-pri" onclick="window._saveShift()">${svg('check')} บันทึกกะ</button>`});
+    const render=async(tid)=>{
+      let sc=[];try{sc=await API.get('/therapist/'+tid+'/schedules')||[];}catch{}
+      const byDow={};(sc||[]).forEach(s=>byDow[s.dayOfWeek]=s);
+      document.getElementById('shDays').innerHTML=days.map((d,i)=>{const s=byDow[i];const on=s?s.isWorkday:false;const st=s?(s.startTime||'09:00:00').slice(0,5):'09:00';const et=s?(s.endTime||'22:00:00').slice(0,5):'22:00';
+        return `<div style="display:grid;grid-template-columns:80px 1fr 1fr 44px;gap:10px;align-items:center;padding:5px 0"><span style="font-weight:500;font-size:13px">${d}</span><input type="time" class="sh-st" data-dow="${i}" value="${st}" style="height:36px"><input type="time" class="sh-et" data-dow="${i}" value="${et}" style="height:36px"><span class="sh-tg" data-dow="${i}" data-on="${on?1:0}" onclick="this.dataset.on=this.dataset.on==='1'?'0':'1';this.style.background=this.dataset.on==='1'?'var(--brand)':'#dde0ea'" style="width:42px;height:24px;border-radius:14px;background:${on?'var(--brand)':'#dde0ea'};cursor:pointer;display:inline-block"></span></div>`;}).join('');
+    };
+    setTimeout(()=>{const sel=document.getElementById('shTh');render(sel.value);sel.onchange=()=>render(sel.value);},40);
+    window._saveShift=async()=>{
+      const tid=document.getElementById('shTh').value;const today=(d=>new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10))(new Date());
+      try{
+        for(let i=0;i<7;i++){const tg=document.querySelector('.sh-tg[data-dow="'+i+'"]');const st=document.querySelector('.sh-st[data-dow="'+i+'"]').value;const et=document.querySelector('.sh-et[data-dow="'+i+'"]').value;
+          await API.post('/therapist/'+tid+'/schedules',{dayOfWeek:i,startTime:st+':00',endTime:et+':00',isWorkday:tg.dataset.on==='1',effectiveFrom:today,effectiveTo:null});}
+        BS.closeModal();BS.toast('บันทึกตารางกะแล้ว');
+      }catch(e){BS.toast('บันทึกไม่สำเร็จ: '+e.message,'x');}
+    };
+  };
+  // ค่ามือ & คอมมิชชัน — เชื่อม /report/therapist-performance จริง
+  window.commReport=async function(){
+    BS.modal({title:'ค่ามือ & ค่าคอมมิชชัน',sub:'กำลังโหลด...',w:540,body:'<div style="padding:24px;text-align:center;color:var(--ink-3)">กำลังโหลด...</div>'});
+    let perf=[];try{const r=await API.get('/report/therapist-performance');perf=r.performance||[];}catch{}
+    const sum=perf.reduce((s,p)=>s+(p.totalCommission||0),0);
+    BS.modal({title:'ค่ามือ & ค่าคอมมิชชัน',sub:'เดือนนี้ · รวมค่าคอม '+fmt(Math.round(sum))+' ฿',w:540,
+      body:perf.length?`<table class="tbl" style="min-width:0"><thead><tr><th>หมอนวด</th><th style="text-align:right">งาน</th><th style="text-align:right">ยอดขาย</th><th style="text-align:right">ค่าคอม</th></tr></thead><tbody>${perf.map(p=>`<tr><td><div class="cell-u">${av(p.displayName,30)}<span style="font-weight:600">${p.displayName}</span></div></td><td style="text-align:right">${p.totalCustomers}</td><td style="text-align:right">${fmt(p.totalRevenue)} ฿</td><td style="text-align:right;font-weight:600;color:var(--brand-700)">${fmt(Math.round(p.totalCommission))} ฿</td></tr>`).join('')}</tbody></table>`:'<div style="padding:20px;text-align:center;color:var(--ink-3)">ยังไม่มีข้อมูลค่าคอมเดือนนี้ (ต้องมีบิลที่ตั้งค่าอัตราคอมหมอนวด)</div>',
+      foot:`<button class="btn btn-pri" onclick="BS.closeModal()">ปิด</button>`});
+  };
+};
+</script>
+<script src="../assets/api.js?v=2"></script>
+<script src="../assets/shell.js?v=8"></script>
+</body>
+</html>

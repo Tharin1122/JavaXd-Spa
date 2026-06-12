@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 21c-4.5 0-8-2.6-8-6 0 0 2.4.4 4 1.6C10.7 11.7 12 9 12 9s1.3 2.7 4 7.6c1.6-1.2 4-1.6 4-1.6 0 3.4-3.5 6-8 6Z' fill='%236c5ce7'/></svg>">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JavaXd · แพ็กเกจ &amp; โปรโมชัน</title>
+<link rel="stylesheet" href="../assets/theme.css?v=1">
+<style>
+.promo{border-radius:18px;padding:22px;color:#fff;position:relative;overflow:hidden;box-shadow:var(--shadow);min-height:170px;display:flex;flex-direction:column}
+.promo::after{content:'';position:absolute;right:-30px;top:-30px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,.12)}
+.promo .pct{font-size:40px;font-weight:800;line-height:1}
+.promo .nm{font-size:17px;font-weight:700;margin-top:6px}
+.promo .ds{font-size:13px;opacity:.9;margin-top:4px}
+.promo .ft{margin-top:auto;display:flex;align-items:center;justify-content:space-between;padding-top:14px;font-size:12px;position:relative;z-index:2}
+.promo .code{background:rgba(255,255,255,.2);padding:5px 12px;border-radius:8px;font-weight:700;letter-spacing:.06em}
+.add-promo{border:2px dashed var(--line-2);border-radius:18px;display:grid;place-items:center;color:var(--ink-3);min-height:170px;cursor:pointer;transition:.15s}
+.add-promo:hover{border-color:var(--brand);color:var(--brand);background:var(--brand-soft)}
+</style>
+</head>
+<body data-title="แพ็กเกจ &amp; โปรโมชัน">
+
+<template id="page">
+  <div class="page-h">
+    <div class="ttl"><h2>แพ็กเกจ &amp; โปรโมชัน</h2><p>จัดการแคมเปญส่งเสริมการขาย คูปอง และโปรโมชันตามฤดูกาล</p></div>
+    <div class="sp"><button class="btn btn-pri" onclick="newPromo()" data-i="plus">สร้างโปรโมชัน</button></div>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat"><div class="row1"><div class="ic ic-purple" data-i="tag"></div><span class="tt">โปรโมชันที่ใช้งาน</span></div><div class="val">6</div><div class="row3"><span class="from">กำลังแสดงผล</span></div></div>
+    <div class="stat"><div class="row1"><div class="ic ic-green" data-i="money"></div><span class="tt">ยอดขายจากโปร</span></div><div class="val">96,400 <small>฿</small></div><div class="row3"><span class="from">เดือนนี้</span><span class="trend up">23%</span></div></div>
+    <div class="stat"><div class="row1"><div class="ic ic-orange" data-i="users"></div><span class="tt">คูปองถูกใช้</span></div><div class="val">214 <small>ครั้ง</small></div><div class="row3"><span class="from">จาก 9 แคมเปญ</span></div></div>
+    <div class="stat"><div class="row1"><div class="ic ic-blue" data-i="star"></div><span class="tt">คอร์สขายได้</span></div><div class="val">428</div><div class="row3"><span class="from">แพ็กเกจล่วงหน้า</span></div></div>
+  </div>
+
+  <h3 style="font-size:16px;font-weight:700;margin-bottom:16px">โปรโมชันที่กำลังใช้งาน</h3>
+  <div class="grid-3" id="promo-grid" style="margin-bottom:30px"></div>
+
+  <div class="card card-pad">
+    <div class="card-h"><h3>รหัสคูปอง &amp; การใช้งาน</h3><a class="sp link" onclick="newCoupon()">+ สร้างคูปอง</a></div>
+    <table class="tbl" id="coupon-tbl"></table>
+  </div>
+</template>
+
+<script>window.BASE='../';window.PAGE='packages';</script>
+<script>if(!localStorage.getItem('th_auth'))location.href=(window.BASE||'')+'login.html';</script>
+<script>
+window.PAGE_INIT=function(){
+  document.querySelectorAll('[data-i]').forEach(e=>{const t=e.textContent.trim();e.innerHTML=svg(e.dataset.i)+(t?'<span>'+t+'</span>':'')});
+  const GRAD=['linear-gradient(135deg,#7b6bf0,#6c5ce7)','linear-gradient(135deg,#34c98a,#22b07d)','linear-gradient(135deg,#f7b955,#f0913c)','linear-gradient(135deg,#5fb4ff,#3b9bff)','linear-gradient(135deg,#f08aa8,#ec5f86)'];
+  const discLabel=p=>p.discountPercent?('ลด '+p.discountPercent+'%'):p.discountAmount?('ลด '+fmt(p.discountAmount)+'฿'):'โปรพิเศษ';
+  const expTxt=d=>d?('ถึง '+API.fmtDate(d)):'ตลอดไป';
+
+  async function load(){
+    let d;try{d=await API.get('/promotion');}catch(e){console.error('promotion',e);return;}
+    const promos=d.promos||[],coupons=d.coupons||[];
+    // stat cards
+    const v=document.querySelectorAll('.stat-grid .val');
+    if(v[0])v[0].textContent=d.summary.activePromos;
+    if(v[1])v[1].innerHTML=fmt(d.summary.totalSold)+' <small>คอร์ส</small>';
+    if(v[2])v[2].innerHTML=d.summary.couponsUsed+' <small>ครั้ง</small>';
+    if(v[3])v[3].textContent=coupons.length;
+    const lbls=document.querySelectorAll('.stat-grid .tt');if(lbls[1])lbls[1].textContent='ขายจากโปร (ครั้ง)';if(lbls[3])lbls[3].textContent='คูปองทั้งหมด';
+    document.querySelectorAll('.stat-grid .trend').forEach(t=>t.remove());
+    // การ์ดคลิกดูรายละเอียดได้ (reuse modal เดียวกับหน้าอื่น)
+    const expTxt2=(e)=>e?(new Date(e)<new Date()?'หมดอายุแล้ว':'ถึง '+API.fmtDate(e)):'ไม่มีหมดอายุ';
+    BS.statDetails([
+      {title:'โปรโมชันที่ใช้งาน · '+d.summary.activePromos,sub:'แคมเปญที่กำลังแสดงผล',rows:promos.length?promos.map(p=>[p.title,expTxt2(p.expiresAt)]):[['ยังไม่มีโปรโมชัน','—']]},
+      {title:'ขายจากโปร · '+fmt(d.summary.totalSold)+' ครั้ง',sub:'ยอดสะสม',rows:[['คอร์ส/แพ็กเกจที่ขายไป',fmt(d.summary.totalSold)+' ครั้ง'],['ดูคอร์สทั้งหมด','หน้า "บริการ & คอร์ส"','var(--brand-700)']]},
+      {title:'คูปองถูกใช้ · '+d.summary.couponsUsed+' ครั้ง',sub:'การใช้รายคูปอง',rows:coupons.length?coupons.map(c=>[c.code,(c.usedCount||0)+(c.quota?' / '+c.quota:'')+' ครั้ง']):[['ยังไม่มีคูปอง','—']]},
+      {title:'คูปองทั้งหมด · '+coupons.length,sub:'สถานะรายคูปอง',rows:coupons.length?coupons.map(c=>{const exp=c.expiresAt&&new Date(c.expiresAt)<new Date();return [c.code,exp?'หมดอายุ':'ใช้ได้',exp?'var(--red)':'#178a61'];}):[['ยังไม่มีคูปอง','—']]},
+    ]);
+    // promo cards
+    document.getElementById('promo-grid').innerHTML=promos.map((p,i)=>`
+      <div class="promo" style="background:${GRAD[i%GRAD.length]};cursor:pointer" onclick="editPromo('${p.id}')">
+        <div class="pct">${discLabel(p)}</div>
+        <div class="nm">${p.title}</div><div class="ds">${p.description||''}</div>
+        <div class="ft"><span class="code">${p.code||'—'}</span><span>${expTxt(p.expiresAt)}</span></div>
+      </div>`).join('')+
+      `<div class="add-promo" onclick="newPromo()"><div style="text-align:center">${svg('plus')}<div style="margin-top:6px;font-weight:600">เพิ่มโปรโมชัน</div></div></div>`;
+    // coupon table
+    const cdl=c=>c.discountPercent?(c.discountPercent+'%'):c.discountAmount?(fmt(c.discountAmount)+'฿'):'-';
+    document.getElementById('coupon-tbl').innerHTML=
+      '<thead><tr><th>รหัส</th><th>ชื่อแคมเปญ</th><th>ส่วนลด</th><th>หมดอายุ</th><th>ใช้ไป / โควต้า</th><th>สถานะ</th><th></th></tr></thead><tbody>'+
+      (coupons.length?coupons.map(c=>{const exp=c.expiresAt&&new Date(c.expiresAt)<new Date();return `<tr>
+        <td><span class="badge b-purple" style="font-family:monospace;letter-spacing:.05em">${c.code}</span></td>
+        <td style="font-weight:600">${c.campaign||''}</td>
+        <td><b>${cdl(c)}</b></td>
+        <td class="sub">${c.expiresAt?API.fmtDate(c.expiresAt):'ไม่จำกัด'}</td>
+        <td>${c.usedCount} / ${c.quota||'∞'}</td>
+        <td><span class="badge ${exp?'b-gray':'b-green'}">${exp?'หมดอายุ':'ใช้งาน'}</span></td>
+        <td><div class="row-act"><button data-i="edit" onclick="editCoupon('${c.id}')"></button></div></td>
+      </tr>`}).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--ink-3);padding:30px">ยังไม่มีคูปอง — กด "+ สร้างคูปอง"</td></tr>')+'</tbody>';
+    document.querySelectorAll('#coupon-tbl [data-i]').forEach(e=>e.innerHTML=svg(e.dataset.i));
+    window._PROMOS=promos;window._COUPONS=coupons;
+  }
+  load();
+
+  function promoForm(p){p=p||{};return `<div class="field"><label>ชื่อโปรโมชัน</label><input id="pTitle" value="${(p.title||'').replace(/"/g,'&quot;')}" placeholder="เช่น ลด 15% ลูกค้าใหม่"></div>
+      <div class="grid2"><div class="field"><label>ส่วนลด (%)</label><input id="pPct" type="number" value="${p.discountPercent||''}" placeholder="15"></div>
+        <div class="field"><label>หรือ ส่วนลด (บาท)</label><input id="pAmt" type="number" value="${p.discountAmount||''}" placeholder="300"></div></div>
+      <div class="grid2"><div class="field"><label>โค้ด</label><input id="pCode" value="${p.code||''}" style="text-transform:uppercase;font-family:monospace"></div>
+        <div class="field"><label>หมดอายุ</label><input id="pExp" type="date" value="${p.expiresAt||''}"></div></div>
+      <div class="field"><label>เงื่อนไข / รายละเอียด</label><input id="pDesc" value="${(p.description||'').replace(/"/g,'&quot;')}" placeholder="เช่น ทุกบริการนวด"></div>`;}
+  function readPromo(){return {title:document.getElementById('pTitle').value.trim(),discountPercent:parseFloat(document.getElementById('pPct').value)||null,discountAmount:parseFloat(document.getElementById('pAmt').value)||null,code:document.getElementById('pCode').value.trim()||null,expiresAt:document.getElementById('pExp').value||null,description:document.getElementById('pDesc').value.trim()||null};}
+  window.newPromo=function(){BS.modal({title:'สร้างโปรโมชันใหม่',sub:'ตั้งแคมเปญส่งเสริมการขาย',w:520,body:promoForm(),foot:`<button class="btn btn-ghost" onclick="BS.closeModal()">ยกเลิก</button><button class="btn btn-pri" onclick="window._savePromo()">${svg('check')} เผยแพร่</button>`});window._savePromo=async()=>{const b=readPromo();if(!b.title){BS.toast('กรอกชื่อ','x');return;}try{await API.post('/promotion',b);BS.closeModal();BS.toast('สร้างโปรโมชันแล้ว');await load();}catch(e){BS.toast('ไม่สำเร็จ: '+e.message,'x');}};};
+  window.editPromo=function(id){const p=(window._PROMOS||[]).find(x=>x.id===id);if(!p)return;BS.modal({title:'แก้ไขโปรโมชัน',sub:p.title,w:520,body:promoForm(p),foot:`<button class="btn btn-ghost" style="color:var(--red);border-color:#f4ccd0;margin-right:auto" onclick="window._delPromo('${id}')">${svg('trash')} ลบ</button><button class="btn btn-ghost" onclick="BS.closeModal()">ยกเลิก</button><button class="btn btn-pri" onclick="window._savePromoE('${id}')">${svg('check')} บันทึก</button>`});window._savePromoE=async(pid)=>{try{await API.put('/promotion/'+pid,readPromo());BS.closeModal();BS.toast('บันทึกแล้ว');await load();}catch(e){BS.toast('ไม่สำเร็จ','x');}};window._delPromo=async(pid)=>{try{await API.del('/promotion/'+pid);BS.closeModal();BS.toast('ลบแล้ว');await load();}catch(e){BS.toast('ลบไม่สำเร็จ','x');}};};
+
+  function couponForm(c){c=c||{};return `<div class="field"><label>รหัสคูปอง</label><input id="cCode" value="${c.code||''}" placeholder="เช่น NEW15" style="text-transform:uppercase;font-family:monospace;letter-spacing:.05em"></div>
+      <div class="field"><label>ชื่อแคมเปญ</label><input id="cCamp" value="${(c.campaign||'').replace(/"/g,'&quot;')}" placeholder="ลูกค้าใหม่ -15%"></div>
+      <div class="grid2"><div class="field"><label>ส่วนลด (%)</label><input id="cPct" type="number" value="${c.discountPercent||''}"></div><div class="field"><label>หรือ (บาท)</label><input id="cAmt" type="number" value="${c.discountAmount||''}"></div></div>
+      <div class="grid2"><div class="field"><label>โควต้า (0=ไม่จำกัด)</label><input id="cQuota" type="number" value="${c.quota||0}"></div><div class="field"><label>หมดอายุ</label><input id="cExp" type="date" value="${c.expiresAt||''}"></div></div>`;}
+  function readCoupon(){return {code:document.getElementById('cCode').value.trim().toUpperCase(),campaign:document.getElementById('cCamp').value.trim()||null,discountPercent:parseFloat(document.getElementById('cPct').value)||null,discountAmount:parseFloat(document.getElementById('cAmt').value)||null,quota:parseInt(document.getElementById('cQuota').value)||0,expiresAt:document.getElementById('cExp').value||null};}
+  window.newCoupon=function(){BS.modal({title:'สร้างรหัสคูปอง',sub:'โค้ดส่วนลดสำหรับลูกค้า',w:460,body:couponForm(),foot:`<button class="btn btn-ghost" onclick="BS.closeModal()">ยกเลิก</button><button class="btn btn-pri" onclick="window._saveCoupon()">${svg('check')} บันทึก</button>`});window._saveCoupon=async()=>{const b=readCoupon();if(!b.code){BS.toast('กรอกรหัส','x');return;}try{await API.post('/promotion/coupon',b);BS.closeModal();BS.toast('สร้างคูปองแล้ว');await load();}catch(e){BS.toast('ไม่สำเร็จ: '+e.message,'x');}};};
+  window.editCoupon=function(id){const c=(window._COUPONS||[]).find(x=>x.id===id);if(!c)return;BS.modal({title:'แก้ไขคูปอง '+c.code,w:460,body:couponForm(c),foot:`<button class="btn btn-ghost" onclick="BS.closeModal()">ยกเลิก</button><button class="btn btn-pri" onclick="window._saveCouponE('${id}')">${svg('check')} บันทึก</button>`});window._saveCouponE=async(cid)=>{try{await API.put('/promotion/coupon/'+cid,readCoupon());BS.closeModal();BS.toast('บันทึกแล้ว');await load();}catch(e){BS.toast('ไม่สำเร็จ','x');}};};
+};
+</script>
+<script src="../assets/api.js?v=2"></script>
+<script src="../assets/shell.js?v=8"></script>
+</body>
+</html>

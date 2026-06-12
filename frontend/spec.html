@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 21c-4.5 0-8-2.6-8-6 0 0 2.4.4 4 1.6C10.7 11.7 12 9 12 9s1.3 2.7 4 7.6c1.6-1.2 4-1.6 4-1.6 0 3.4-3.5 6-8 6Z' fill='%236c5ce7'/></svg>">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JavaXd · สเปก Frontend ↔ Backend</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--brand:#6c5ce7;--ink:#1a2138;--ink2:#5a607a;--ink3:#8d93ad;--line:#e7e9f2;--bg:#f4f5fa}
+body{font-family:'IBM Plex Sans Thai',sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.7}
+.wrap{max-width:980px;margin:0 auto;padding:40px 24px 80px}
+.cover{background:linear-gradient(140deg,#241f44,#3b2f7a 60%,#5b4bd6);color:#fff;border-radius:20px;padding:34px 38px;margin-bottom:30px}
+.cover h1{font-size:26px;font-weight:800}
+.cover p{color:#c5c0ea;margin-top:8px;font-size:14px;max-width:640px}
+.cover .meta{display:flex;gap:24px;margin-top:18px;font-size:12.5px;color:#b9b3e6;flex-wrap:wrap}
+h2{font-size:19px;font-weight:800;margin:38px 0 6px;display:flex;align-items:center;gap:10px}
+h2 .n{width:30px;height:30px;border-radius:9px;background:var(--brand);color:#fff;display:inline-grid;place-items:center;font-size:14px;flex:0 0 30px}
+h3{font-size:15.5px;font-weight:700;margin:24px 0 4px}
+.sub{color:var(--ink2);font-size:13px;margin-bottom:12px}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-top:12px;box-shadow:0 1px 3px rgba(20,24,50,.05)}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+th{text-align:left;font-size:12px;color:var(--ink3);font-weight:700;padding:8px 10px;border-bottom:2px solid var(--line);white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:none}
+code{font-family:'SF Mono',Consolas,monospace;font-size:12px;background:#f1f2f8;border:1px solid var(--line);border-radius:6px;padding:2px 7px;color:#5a4bd6;white-space:nowrap}
+code.ev{color:#0a8f4d;background:#eefaf3;border-color:#cdeede}
+.b{display:inline-block;font-size:11px;font-weight:700;border-radius:14px;padding:2px 10px;margin-right:4px}
+.b.get{background:#e8f3ff;color:#2477cc}.b.post{background:#eafaf1;color:#178a61}.b.patch{background:#fdf3e8;color:#b9791a}.b.put{background:#f3eafe;color:#8b5cf6}.b.del{background:#fdeef0;color:#d33c50}
+.role-pill{display:inline-flex;align-items:center;gap:7px;font-weight:700;font-size:13.5px}
+.note{background:#fff8ec;border:1px solid #f0d9a8;color:#8a6d1a;border-radius:11px;padding:10px 14px;font-size:12.5px;margin-top:10px}
+.ok{background:#eefaf3;border:1px solid #cdeede;color:#177a51;border-radius:11px;padding:10px 14px;font-size:12.5px;margin-top:10px}
+ul{padding-left:20px}li{margin:4px 0}
+@media print{body{background:#fff}.wrap{padding:0}.card{break-inside:avoid;box-shadow:none}.cover{border-radius:0}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="cover">
+    <h1>📐 สเปก Frontend ↔ Backend · JavaXd Massage &amp; Spa</h1>
+    <p>เอกสารอ้างอิงสำหรับทีม backend: หน้าตามบทบาท (Role-based UI) ปุ่มแต่ละปุ่มเรียก endpoint อะไร payload หน้าตาไหน และ event เรียลไทม์ที่หน้าจอรอฟัง</p>
+    <div class="meta"><span>เวอร์ชัน UI: role-based v2</span><span>API Base: <b>https://mms-api-25xj.onrender.com/api</b></span><span>Realtime: SignalR <b>/hubs/mms</b></span></div>
+  </div>
+
+  <h2><span class="n">1</span>หลักการ Role-based UI</h2>
+  <div class="sub">แต่ละบทบาทเห็น "หน้าที่ออกแบบมาเฉพาะงานตัวเอง" — เมนู, หน้าแรก และปุ่มต่างกันตั้งแต่ต้น (ไม่ใช่หน้าเดียวกันแล้วซ่อนปุ่ม) · กำหนดใน <code>assets/shell.js?v=8</code> (ROLE_MENU / ROLE_HOME)</div>
+  <div class="card">
+    <table>
+      <thead><tr><th>บทบาท (roles[0] ใน JWT)</th><th>หน้าแรกหลัง Login</th><th>เมนูที่เห็น</th><th>สิ่งที่ไม่เห็น</th></tr></thead>
+      <tbody>
+        <tr><td class="role-pill">👑 Owner</td><td><code>index.html</code> (การเงินเต็ม)</td><td>ทุกเมนู (15 เมนู)</td><td>—</td></tr>
+        <tr><td class="role-pill">🧑‍💼 Manager</td><td><code>index.html</code> (โหมดผู้จัดการ)</td><td>ทุกเมนู ยกเว้น สิทธิ์ (Roles) และแพ็กเกจการใช้งาน</td><td>รายรับเดือน/กำไรสุทธิ (การ์ดถูกแทนด้วย "สต็อกใกล้หมด"), subscription, role matrix</td></tr>
+        <tr><td class="role-pill">🧑‍💻 Reception</td><td><code>pages/front-desk.html</code></td><td>Front Desk · การจอง&amp;คิว · POS · ตารางหมอนวด · ลูกค้า · บริการ(ดู)</td><td>การเงินรวม, รายงาน, พนักงาน, สต็อก, ตั้งค่า</td></tr>
+        <tr><td class="role-pill">💆 Therapist</td><td><code>pages/my-queue.html</code></td><td>เมนูเดียว: คิวของฉัน</td><td>คิวคนอื่น, เงินร้าน, ลูกค้าทั้งหมด — เห็นเฉพาะงาน/กะ/ค่ามือตัวเอง</td></tr>
+        <tr><td class="role-pill">💰 Cashier</td><td><code>pages/pos.html</code></td><td>POS · การจอง&amp;คิว (ดูคิวรอชำระ)</td><td>ทุกอย่างนอกจากบิลและคิว</td></tr>
+      </tbody>
+    </table>
+    <div class="note">⚠ ฝั่ง UI เป็นเพียง "ความสะดวก" — backend ต้องบังคับสิทธิ์ซ้ำทุก endpoint ด้วย role ใน JWT เสมอ (เช่น Therapist เรียก <code>GET /report/...</code> ต้องได้เฉพาะข้อมูลตัวเอง)</div>
+    <div class="ok">✅ ทดสอบ UI แต่ละบทบาทได้จากหน้า Login → ปุ่ม "พรีวิวหน้าตาแต่ละบทบาท" (ไม่ใช้ token · ลบออกตอน production — อยู่ใน <code>login.html</code> ฟังก์ชัน <code>previewRole()</code>)</div>
+  </div>
+
+  <h2><span class="n">2</span>โครงระบบกลาง (ทุกหน้าใช้ร่วมกัน)</h2>
+  <div class="card">
+    <h3>assets/api.js?v=2</h3>
+    <ul>
+      <li><code>API.get/post/put/patch/del(path, body)</code> — แนบ <code>Authorization: Bearer &lt;th_token&gt;</code> อัตโนมัติ · 401 → เด้งกลับ login</li>
+      <li><code>API.setAuth({accessToken,refreshToken,user})</code> เก็บใน localStorage (<code>th_token</code>, <code>th_user</code>)</li>
+      <li>SignalR auto-connect เมื่อมี token · event ที่หน้าจอฟัง: <code class="ev">QueueUpdated</code> <code class="ev">BookingUpdated</code> <code class="ev">TherapistStatusChanged</code> <code class="ev">RoomStatusChanged</code> <code class="ev">DashboardSnapshot</code> <code class="ev">CleaningCheck</code> — ยิง event เหล่านี้ทุกครั้งที่ข้อมูลเปลี่ยน หน้าจอจะรีโหลดเอง</li>
+    </ul>
+    <h3>ปุ่มกลางใน Topbar / Sidebar (shell.js?v=8)</h3>
+    <table>
+      <thead><tr><th>ปุ่ม</th><th>ทำอะไร</th><th>Endpoint</th></tr></thead>
+      <tbody>
+        <tr><td>สร้างการจอง (ม่วง)</td><td>เปิด modal จอง/Walk-in · ค้นลูกค้าเดิม, โหลดบริการ+หมอนวด</td><td><span class="b get">GET</span><code>/customer?search=&amp;pageSize=6</code> · <span class="b get">GET</span><code>/services</code> · <span class="b get">GET</span><code>/therapist</code></td></tr>
+        <tr><td>↳ ยืนยันการจอง</td><td>สร้างลูกค้าใหม่ถ้าไม่พบ → สร้างการจอง</td><td><span class="b post">POST</span><code>/customer</code> → <span class="b post">POST</span><code>/booking</code> {customerId, bookingDate, startTime, items[{serviceId,therapistId,therapistSelectionMode,sortOrder}]}</td></tr>
+        <tr><td>↳ เข้าคิวเลย (Walk-in)</td><td>สร้างคิวทันที ไม่ต้องนัด</td><td><span class="b post">POST</span><code>/walk-in</code> {customerId, items[], notes}</td></tr>
+        <tr><td>🔔 แจ้งเตือน</td><td>รายการเหตุการณ์ล่าสุด</td><td><span class="b get">GET</span><code>/timeline?pageSize=12</code></td></tr>
+        <tr><td>ค้นหา (global)</td><td>ค้นลูกค้า/หมอนวด/เมนู</td><td><span class="b get">GET</span><code>/customer?search=</code> · <span class="b get">GET</span><code>/therapist</code></td></tr>
+        <tr><td>อวาตาร์ → แก้โปรไฟล์</td><td>แก้ชื่อ/เบอร์/รหัสผ่านตัวเอง</td><td><span class="b post">POST</span><code>/auth/change-password</code> → <span class="b put">PUT</span><code>/auth/me</code></td></tr>
+        <tr><td>อวาตาร์ → ผูก LINE</td><td>QR ผูกบัญชี LINE รับแจ้งเตือน</td><td><span class="b post">POST</span><code>/auth/link-token</code> {userId} → poll <span class="b get">GET</span><code>/auth/link-status/{token}</code></td></tr>
+        <tr><td>ออกจากระบบ</td><td>ล้าง token ทุก key → login.html</td><td>(client เท่านั้น)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2><span class="n">3</span>Reception · pages/front-desk.html (หน้าใหม่)</h2>
+  <div class="sub">จอเดียวจบสำหรับงานต้อนรับ: ปุ่มลัด 4 ปุ่ม + ตัวเลขวันนี้ + บอร์ด 3 คอลัมน์ (รอเรียก / กำลังบริการ / นัดที่ยังไม่มา)</div>
+  <div class="card">
+    <table>
+      <thead><tr><th>ปุ่ม / ส่วน</th><th>ทำอะไร</th><th>Endpoint</th></tr></thead>
+      <tbody>
+        <tr><td>รับ Walk-in (ปุ่มม่วงใหญ่)</td><td>เปิด modal กลางในโหมด Walk-in</td><td><span class="b post">POST</span><code>/walk-in</code></td></tr>
+        <tr><td>สร้างการจอง</td><td>modal กลางโหมดจองล่วงหน้า</td><td><span class="b post">POST</span><code>/booking</code></td></tr>
+        <tr><td>รับชำระเงิน</td><td>ไป pos.html</td><td>—</td></tr>
+        <tr><td>จอเรียกคิว (TV)</td><td>เปิด queue-display.html แท็บใหม่ (จอลูกค้า)</td><td>ควร subscribe <code class="ev">QueueUpdated</code></td></tr>
+        <tr><td>ตัวเลข รอ/บริการ/เสร็จ</td><td>สรุปคิววันนี้</td><td><span class="b get">GET</span><code>/dashboard</code> → queue.waiting / inService / completed</td></tr>
+        <tr><td>บอร์ดคิว 2 คอลัมน์แรก</td><td>คิววันนี้ แยกตาม status (0=รอ, 1=กำลังบริการ)</td><td><span class="b get">GET</span><code>/walk-in</code> (รายการวันนี้)</td></tr>
+        <tr><td>คอลัมน์นัดวันนี้</td><td>นัดที่ยังไม่เช็คอิน</td><td><span class="b get">GET</span><code>/booking?date={today}</code></td></tr>
+        <tr><td>การ์ดคิวรอ → เรียกคิว</td><td>เลือกหมอนวดที่ว่าง → มอบหมาย + เริ่ม</td><td><span class="b get">GET</span><code>/walk-in/{id}</code> · <span class="b get">GET</span><code>/walk-in/available-therapists?serviceIds=</code> · <span class="b patch">PATCH</span><code>/walk-in/{id}/assign</code> → <span class="b patch">PATCH</span><code>/walk-in/{id}/start</code></td></tr>
+        <tr><td>การ์ดคิวรอ → ยกเลิกคิว</td><td>ยกเลิกพร้อมเหตุผล</td><td><span class="b patch">PATCH</span><code>/walk-in/{id}/cancel</code> {reason}</td></tr>
+        <tr><td>การ์ดนัด → เช็คอิน</td><td>แปลงนัดเป็นคิว</td><td><span class="b post">POST</span><code>/walk-in</code> {customerId, bookingId, items[]} — <b>ถ้ามี endpoint เฉพาะ (เช่น /booking/{id}/check-in) แจ้งทีม UI เปลี่ยนได้ที่ <code>fdCheckin()</code></b></td></tr>
+      </tbody>
+    </table>
+    <div class="note">โหลดบอร์ดใหม่อัตโนมัติเมื่อได้ <code class="ev">QueueUpdated</code>/<code class="ev">BookingUpdated</code> + สำรอง polling ทุก 60 วิ</div>
+  </div>
+
+  <h2><span class="n">4</span>Therapist · pages/my-queue.html (หน้าใหม่)</h2>
+  <div class="sub">หมอนวดเห็นเฉพาะของตัวเอง — จับคู่บัญชีผู้ใช้กับ therapist ผ่าน <code>therapist.userId === user.id</code> (สร้างด้วย <code>POST /therapist/from-user</code> ในหน้า staff)</div>
+  <div class="card">
+    <table>
+      <thead><tr><th>ปุ่ม / ส่วน</th><th>ทำอะไร</th><th>Endpoint</th></tr></thead>
+      <tbody>
+        <tr><td>การ์ดงานวันนี้</td><td>คิวที่ได้รับมอบหมาย: เวลา ลูกค้า บริการ + หมายเหตุ (แพ้น้ำมัน ฯลฯ เด่นเป็นป้ายส้ม ⚠)</td><td><span class="b get">GET</span><code>/dashboard/schedule</code> → กรอง therapists[] เฉพาะตัวเอง · <b>แนะนำเพิ่ม endpoint <code>GET /therapist/me/queue</code> เพื่อไม่ส่งข้อมูลคนอื่นมาที่ client</b></td></tr>
+        <tr><td>ปุ่ม "เริ่มงาน"</td><td>เปลี่ยนสถานะคิวเป็นกำลังบริการ</td><td><span class="b patch">PATCH</span><code>/walk-in/{queueId}/start</code></td></tr>
+        <tr><td>ปุ่ม "จบงาน"</td><td>จบบริการ → หน้าร้านเก็บเงินต่อ</td><td><span class="b patch">PATCH</span><code>/walk-in/{queueId}/complete</code> <b>(ถ้า backend ใช้ชื่ออื่น แก้ที่ <code>MYQ.done()</code>)</b></td></tr>
+        <tr><td>การ์ดค่ามือเดือนนี้</td><td>ค่าคอมตัวเอง</td><td><span class="b get">GET</span><code>/report/therapist-performance</code> → กรอง therapistId ตัวเอง</td></tr>
+        <tr><td>การ์ดเรตติ้ง</td><td>คะแนนรีวิวตัวเอง</td><td><span class="b get">GET</span><code>/review/therapists</code></td></tr>
+        <tr><td>กะสัปดาห์นี้</td><td>ตารางเข้างาน 7 วัน (อ่านอย่างเดียว)</td><td><span class="b get">GET</span><code>/therapist/{id}/schedules</code></td></tr>
+        <tr><td>ปุ่ม "ขอลางาน"</td><td>ส่งคำขอลา สถานะ "รออนุมัติ" (ผู้จัดการอนุมัติในหน้า staff)</td><td><span class="b post">POST</span><code>/therapist/{id}/leaves</code> {leaveDate, leaveType:0|1, startTime, endTime, reason} — <b>หน้านี้ไม่เรียก /approve</b></td></tr>
+        <tr><td>ปุ่ม "ผูก LINE"</td><td>QR ผูกบัญชี (ฟังก์ชันกลาง BS.linkMyLine)</td><td><span class="b post">POST</span><code>/auth/link-token</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2><span class="n">5</span>Manager · index.html (โหมดผู้จัดการ)</h2>
+  <div class="card">
+    <ul>
+      <li>ใช้แดชบอร์ดเดียวกับ Owner แต่: ซ่อนการ์ด "รายรับเดือนนี้" + การ์ด "รายรับ-รายจ่าย/กำไรสุทธิ" แล้วแสดง <b>"สต็อกใกล้หมด"</b> แทน (<span class="b get">GET</span><code>/inventory</code> → กรอง quantity ≤ minQuantity)</li>
+      <li>เมนูไม่มี: สิทธิ์การใช้งาน (Roles), แพ็กเกจการใช้งาน, การ์ดอัปเกรดใน sidebar</li>
+      <li>ที่เหลือเหมือน Owner: จัดคิว จัดกะ อนุมัติลา (หน้า staff → <span class="b patch">PATCH</span><code>/therapist/{id}/leaves/{leaveId}/approve</code>) จัดการสต็อก/บริการ</li>
+      <li><b>Backend ควรกรอง:</b> ถ้าต้องการซ่อนกำไรจริงจาก Manager ให้ <code>GET /dashboard</code> ตัด field กำไร/รายเดือนเมื่อ role=Manager</li>
+    </ul>
+  </div>
+
+  <h2><span class="n">6</span>Cashier · pages/pos.html</h2>
+  <div class="card">
+    <ul>
+      <li>เมนูเหลือ 2: <b>POS</b> (หน้าแรก) + <b>การจอง&amp;คิว</b> (ดูคิวรอชำระ · โหมดดูอย่างเดียว)</li>
+      <li>แถวบน POS = คิวที่จบบริการรอชำระ → กดโหลดเข้าบิล · ปุ่มรับชำระ → สร้างใบเสร็จ → modal พรีวิวใบกำกับภาษี (VAT 7%) → พิมพ์</li>
+      <li>สิทธิ์ใน matrix client คอลัมน์ที่ 5 (ดู <code>shell.js?v=8 DEF</code>) — backend ควรเพิ่ม Cashier ใน role matrix ฝั่ง server ด้วย</li>
+    </ul>
+  </div>
+
+  <h2><span class="n">7</span>หน้าอื่นๆ (ทุก role ที่มีสิทธิ์) — endpoint ที่ใช้อยู่แล้ว</h2>
+  <div class="card">
+    <table>
+      <thead><tr><th>หน้า</th><th>Endpoint หลักที่เรียกจริงในโค้ด</th></tr></thead>
+      <tbody>
+        <tr><td>แดชบอร์ด</td><td><code>/dashboard</code> · <code>/dashboard/schedule?date=</code> · <code>/expense</code> · <code>/booking?date=</code> · <code>/walk-in/{id}</code> + assign/start/cancel</td></tr>
+        <tr><td>พนักงาน (staff)</td><td><code>/therapist</code> CRUD · <code>/therapist/{id}/status</code> · <code>/therapist/{id}/schedules</code> · <code>/therapist/{id}/leaves</code> + approve · <code>/user</code> + <code>/user/{id}/set-password</code> · <code>/therapist/from-user</code> · <code>/report/therapist-performance</code> · <code>/review/therapists</code></td></tr>
+        <tr><td>สต็อก (inventory)</td><td><code>/inventory</code> CRUD · <code>/inventory/stats</code> · <code>/inventory/{id}/movement</code> {type:'in'|'out', quantity, note}</td></tr>
+        <tr><td>ลูกค้า / การจอง</td><td><code>/customer</code> CRUD+search · <code>/booking</code> CRUD · <code>/walk-in</code> วงจรคิว</td></tr>
+        <tr><td>สิทธิ์ (roles)</td><td><code>/role/matrix</code> (GET/PUT) · <code>/user/roles</code></td></tr>
+        <tr><td>Logs / แจ้งเตือน</td><td><code>/timeline?pageSize=</code></td></tr>
+        <tr><td>Login</td><td><code>/auth/login</code> · <code>/auth/line-config</code> · <code>/auth/line-login</code> {accessToken}</td></tr>
+      </tbody>
+    </table>
+    <div class="note">จุดที่ UI เดาชื่อ endpoint ไว้ (ค้นคำว่า <b>TODO(Backend)</b> ในโค้ด): <code>GET /walk-in</code> (รายการคิววันนี้), <code>PATCH /walk-in/{id}/complete</code>, เช็คอินจากนัด — ถ้าชื่อจริงต่างกัน แก้จุดเดียวในไฟล์หน้านั้นได้เลย</div>
+  </div>
+
+  <h2><span class="n">8</span>สถานะ (enum) ที่ UI ใช้</h2>
+  <div class="card">
+    <table>
+      <thead><tr><th>ชนิด</th><th>ค่า</th></tr></thead>
+      <tbody>
+        <tr><td>คิว (walk-in status)</td><td>0 = รอเรียก (Waiting) · 1 = กำลังให้บริการ (InService) · 2 = เสร็จสิ้น (Completed) · ยกเลิก (Cancelled)</td></tr>
+        <tr><td>การลา (leave)</td><td>status: 0 รออนุมัติ · 1 อนุมัติ · 2 ไม่อนุมัติ — leaveType: 0 ทั้งวัน · 1 บางช่วง</td></tr>
+        <tr><td>สิทธิ์ใน matrix</td><td>1 = เข้าถึงได้ · 2 = ดูอย่างเดียว (แบนเนอร์เหลือง + ซ่อนปุ่มแก้ไข) · 0 = ไม่มีสิทธิ์ (ซ่อนเมนู + บล็อกหน้า)</td></tr>
+        <tr><td>therapistSelectionMode</td><td>0 = ลูกค้า/รีเซปเลือกเอง · 1 = ระบบจัดให้อัตโนมัติ</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+</body>
+</html>

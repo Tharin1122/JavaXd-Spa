@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 21c-4.5 0-8-2.6-8-6 0 0 2.4.4 4 1.6C10.7 11.7 12 9 12 9s1.3 2.7 4 7.6c1.6-1.2 4-1.6 4-1.6 0 3.4-3.5 6-8 6Z' fill='%236c5ce7'/></svg>">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JavaXd · รายงาน</title>
+<link rel="stylesheet" href="../assets/theme.css?v=1">
+<style>
+.line-chart{height:240px;position:relative}
+.heat{display:grid;grid-template-columns:54px repeat(13,1fr);gap:4px}
+.heat .hl{font-size:11px;color:var(--ink-3);display:flex;align-items:center}
+.heat .hc{aspect-ratio:1.1;border-radius:6px;display:grid;place-items:center;font-size:10px;color:#fff;font-weight:600}
+.rank{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.rank:last-child{border-bottom:none}
+.rank .no{width:24px;height:24px;border-radius:7px;background:#eef0f6;display:grid;place-items:center;font-weight:700;font-size:12px;flex:0 0 24px}
+.rank .no.g1{background:#fdf0d2;color:#c9962a}.rank .no.g2{background:#eceef3;color:#6b7290}.rank .no.g3{background:#f7e6d6;color:#c07a3a}
+</style>
+</head>
+<body data-title="รายงาน">
+
+<template id="page">
+  <div class="page-h">
+    <div class="ttl"><h2>รายงาน &amp; วิเคราะห์</h2><p>ข้อมูลเชิงลึกของธุรกิจ ยอดขาย ลูกค้า และประสิทธิภาพทีม</p></div>
+    <div class="sp">
+      <div class="seg"><button>7 วัน</button><button class="on">30 วัน</button><button>ไตรมาส</button><button>ปี</button></div>
+      <button class="btn btn-ghost" onclick="exportPDF()" data-i="down">ส่งออก PDF</button>
+    </div>
+  </div>
+
+  <div class="grid-2 mb24" style="grid-template-columns:1.7fr 1fr">
+    <div class="card card-pad">
+      <div class="card-h"><h3>แนวโน้มรายได้ (30 วัน)</h3><span class="sp big t-green" style="font-size:20px">+18.4%</span></div>
+      <div class="line-chart"><svg id="lc" viewBox="0 0 600 240" preserveAspectRatio="none" style="width:100%;height:100%"></svg></div>
+    </div>
+    <div class="card card-pad">
+      <div class="card-h"><h3>สัดส่วนบริการ</h3></div>
+      <div class="donut-wrap">
+        <div class="donut" id="donut2"><div class="ctr"><b>5</b><span>บริการ</span></div></div>
+        <div class="legend" id="sv-leg"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-3 mb24">
+    <div class="card card-pad">
+      <div class="card-h"><h3>หมอนวดยอดนิยม</h3></div>
+      <div id="top-staff"></div>
+    </div>
+    <div class="card card-pad">
+      <div class="card-h"><h3>บริการขายดี</h3></div>
+      <div id="top-sv"></div>
+    </div>
+    <div class="card card-pad">
+      <div class="card-h"><h3>ลูกค้าใช้จ่ายสูงสุด</h3></div>
+      <div id="top-cust"></div>
+    </div>
+  </div>
+
+  <div class="card card-pad">
+    <div class="card-h"><h3>ช่วงเวลาที่ลูกค้าเข้าใช้บริการมากที่สุด</h3><span class="sp muted" style="font-size:12.5px">จำนวนการจองเฉลี่ย/ชั่วโมง</span></div>
+    <div class="heat" id="heat"></div>
+  </div>
+</template>
+
+<script>window.BASE='../';window.PAGE='reports';</script>
+<script>if(!localStorage.getItem('th_auth'))location.href=(window.BASE||'')+'login.html';</script>
+<script>
+window.PAGE_INIT=function(){
+  document.querySelectorAll('[data-i]').forEach(e=>{const t=e.textContent.trim();e.innerHTML=svg(e.dataset.i)+(t?'<span>'+t+'</span>':'')});
+  const COLORS=['#8b7cf0','#3ea8c9','#e6a23c','#7cc47a','#f08aa8','#f0b07a'];
+
+  function drawLine(pts){
+    const W=600,H=240;const max=Math.max(1,...pts),min=Math.min(0,...pts),step=pts.length>1?W/(pts.length-1):W;
+    const Y=v=>H-((v-min)/((max-min)||1))*(H-30)-15;
+    let d='';pts.forEach((p,i)=>{d+=(i?'L':'M')+(i*step).toFixed(1)+' '+Y(p).toFixed(1)+' ';});
+    const area=`M0 ${H} `+pts.map((p,i)=>'L'+(i*step).toFixed(1)+' '+Y(p).toFixed(1)).join(' ')+` L${W} ${H} Z`;
+    document.getElementById('lc').innerHTML=`
+      <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6c5ce7" stop-opacity="0.28"/><stop offset="1" stop-color="#6c5ce7" stop-opacity="0"/></linearGradient></defs>
+      <path d="${area}" fill="url(#g)"/>
+      <path d="${d}" fill="none" stroke="#6c5ce7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      ${pts.length?`<circle cx="${(pts.length-1)*step}" cy="${Y(pts[pts.length-1])}" r="5" fill="#6c5ce7" stroke="#fff" stroke-width="2.5"/>`:''}`;
+  }
+
+  (async()=>{
+    // แนวโน้มรายได้ + เปอร์เซ็นต์เติบโต
+    try{const rev=await API.get('/report/revenue?groupBy=day');
+      drawLine((rev.series||[]).map(s=>s.revenue));
+    }catch(e){drawLine([]);}
+    try{const sum=await API.get('/report/summary');const g=document.querySelector('.card-h .big');
+      if(g){const v=sum.comparison.revenueGrowth;g.textContent=(v>=0?'+':'')+v+'%';g.className='sp big '+(v>=0?'t-green':'t-red');g.style.fontSize='20px';}
+    }catch(e){}
+
+    // สัดส่วนบริการ + บริการขายดี (popular-services)
+    try{const pop=await API.get('/report/popular-services?top=10');const list=pop.popular||[];
+      const total=list.reduce((s,x)=>s+x.count,0)||1;
+      const top5=list.slice(0,5);
+      let acc=0;const segs=top5.map((s,i)=>{const pct=s.count/total*100;const seg=COLORS[i]+' '+acc+'% '+(acc+pct)+'%';acc+=pct;return seg;});
+      document.getElementById('donut2').style.background='conic-gradient('+segs.join(',')+')';
+      const cb=document.querySelector('#donut2 .ctr b');if(cb)cb.textContent=list.length;
+      document.getElementById('sv-leg').innerHTML=top5.map((s,i)=>`<div class="lg"><span class="d" style="background:${COLORS[i]}"></span><span class="nm">${s.name}</span><span class="pct">${Math.round(s.count/total*100)}%</span></div>`).join('');
+      document.getElementById('top-sv').innerHTML=list.slice(0,5).map((t,i)=>`<div class="rank"><span class="no${i<3?' g'+(i+1):''}">${i+1}</span><span class="av sq" style="width:30px;height:30px;background:${COLORS[i%6]}22;color:${COLORS[i%6]}">${svg('spa')}</span><div style="flex:1;font-weight:600;font-size:13.5px">${t.name}</div><b>${t.count} ครั้ง</b></div>`).join('')||'<div class="sub" style="padding:14px">ยังไม่มีข้อมูล</div>';
+    }catch(e){console.error('popular',e);}
+
+    // หมอนวดยอดนิยม (therapist-performance)
+    try{const perf=await API.get('/report/therapist-performance');const list=perf.performance||[];
+      document.getElementById('top-staff').innerHTML=list.slice(0,5).map((t,i)=>`<div class="rank"><span class="no${i<3?' g'+(i+1):''}">${i+1}</span>${av(t.therapistName,34)}<div style="flex:1"><div style="font-weight:600;font-size:13.5px">${t.therapistName}</div><div class="sub" style="font-size:11.5px">รายได้ ${fmt(t.totalRevenue)} ฿</div></div><b>${t.totalJobs} คิว</b></div>`).join('')||'<div class="sub" style="padding:14px">ยังไม่มีข้อมูล</div>';
+    }catch(e){console.error('perf',e);}
+
+    // ลูกค้าใช้จ่ายสูงสุด
+    try{const r=await API.get('/customer?pageSize=500');const cs=((r&&r.items)||[]).slice().sort((a,b)=>(b.totalSpent||0)-(a.totalSpent||0)).slice(0,5);
+      document.getElementById('top-cust').innerHTML=cs.map((t,i)=>`<div class="rank"><span class="no${i<3?' g'+(i+1):''}">${i+1}</span>${av(t.displayName,34)}<div style="flex:1;font-weight:600;font-size:13px">${t.displayName}</div><b style="font-size:12.5px">${fmt(t.totalSpent||0)} ฿</b></div>`).join('')||'<div class="sub" style="padding:14px">ยังไม่มีข้อมูล</div>';
+    }catch(e){console.error('topcust',e);}
+  })();
+
+  // heatmap — ช่วงเวลายอดนิยม จากการจองจริง (วันในสัปดาห์ × ชั่วโมง)
+  (async()=>{
+    try{
+      const dows=['อา','จ','อ','พ','พฤ','ศ','ส'];const H0=9,H1=21;const hours=[];for(let h=H0;h<=H1;h++)hours.push(h);
+      const grid={};let max=0;
+      const collect=(arr,getDate,getTime)=>{(arr||[]).forEach(b=>{const dRaw=getDate(b);const d=dRaw&&new Date(dRaw);const tm=getTime(b)||'';if(!d||isNaN(d)||!tm)return;const hr=parseInt((''+tm).slice(0,2));if(isNaN(hr)||hr<H0||hr>H1)return;const k=d.getDay()+'_'+hr;grid[k]=(grid[k]||0)+1;if(grid[k]>max)max=grid[k];});};
+      try{const bk=await API.get('/booking?pageSize=500');collect((bk&&bk.items)||bk,b=>b.bookingDate,b=>b.startTime);}catch(e){}
+      const cell=v=>!v?'#eef0f6':`rgba(108,92,231,${(0.22+(v/(max||1))*0.78).toFixed(2)})`;
+      let html='<div class="hl"></div>'+hours.map(h=>`<div class="hl" style="justify-content:center">${h}</div>`).join('');
+      dows.forEach((dn,dow)=>{html+=`<div class="hl">${dn}</div>`+hours.map(h=>{const v=grid[dow+'_'+h]||0;return `<div class="hc" style="background:${cell(v)};color:${v?'#fff':'transparent'}" title="${dn} ${h}:00 · ${v} จอง">${v||''}</div>`;}).join('');});
+      const el=document.getElementById('heat');if(el)el.innerHTML=html;
+      if(!max){if(el)el.closest('.card').querySelector('.heat').outerHTML='<div style="text-align:center;padding:24px;color:var(--ink-3)">ยังไม่มีข้อมูลการจองมากพอจะสรุปช่วงเวลา</div>';}
+    }catch(e){console.error('heat',e);}
+  })();
+
+  // ปุ่มช่วงเวลา 7/30/ไตรมาส/ปี — สลับ active + ปรับช่วงกราฟรายได้จริง
+  const periodDays={'7 วัน':7,'30 วัน':30,'ไตรมาส':90,'ปี':365};
+  document.querySelectorAll('.page-h .seg button').forEach(b=>b.onclick=async()=>{
+    document.querySelectorAll('.page-h .seg button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+    const days=periodDays[b.textContent.trim()]||30;
+    const h3=document.querySelector('.grid-2 .card-h h3');if(h3)h3.textContent='แนวโน้มรายได้ ('+b.textContent.trim()+')';
+    try{const rev=await API.get('/report/revenue?groupBy=day');const series=(rev.series||[]).map(s=>s.revenue);drawLine(series.slice(-days));}catch(e){}
+  });
+
+  // ---- export ----
+  window.exportPDF=function(){ window.print(); };
+  window._oldExport=function(){
+    const sheet=`<div id="repSheet" style="background:#fff;border-radius:12px;padding:28px 30px;color:#2a2f44;width:560px;max-width:100%">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid var(--brand);padding-bottom:14px;margin-bottom:16px">
+        <div style="display:flex;gap:11px"><div class="inv-logo">${svg('lotus')}</div>
+          <div><div style="font-weight:800;font-size:16px">JavaXd Massage &amp; Spa</div><div style="font-size:11px;color:#8089a3">รายงานวิเคราะห์ผลประกอบการ</div></div></div>
+        <div style="text-align:right"><div style="font-weight:700;font-size:13px;color:var(--brand-700)">ช่วงข้อมูล</div><div style="font-size:13px">30 วันล่าสุด</div></div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px">
+        <tr style="border-bottom:1px solid #eceef5"><td style="padding:9px 0;color:#5a607a">รายรับรวม</td><td style="text-align:right;font-weight:700;color:#22b07d">412,950 ฿</td></tr>
+        <tr style="border-bottom:1px solid #eceef5"><td style="padding:9px 0;color:#5a607a">จำนวนการจอง</td><td style="text-align:right;font-weight:700">215 ครั้ง</td></tr>
+        <tr style="border-bottom:1px solid #eceef5"><td style="padding:9px 0;color:#5a607a">ลูกค้าใหม่</td><td style="text-align:right;font-weight:700">48 คน</td></tr>
+        <tr><td style="padding:9px 0;color:#5a607a">อัตราจองซ้ำ</td><td style="text-align:right;font-weight:700;color:var(--brand-700)">62%</td></tr>
+      </table>
+      <div style="font-weight:700;font-size:13px;margin-bottom:8px">บริการยอดนิยม 5 อันดับ</div>
+      ${[['นวดไทย 60 นาที','86 ครั้ง'],['นวดน้ำมัน 90 นาที','64 ครั้ง'],['อโรมาเธอราพี','41 ครั้ง'],['นวดเท้า','38 ครั้ง'],['ประคบสมุนไพร','27 ครั้ง']].map((p,i)=>`<div style="display:flex;justify-content:space-between;font-size:12.5px;padding:6px 0;border-bottom:1px dashed #eceef5"><span style="color:#5a607a">${i+1}. ${p[0]}</span><b>${p[1]}</b></div>`).join('')}
+      <div style="margin-top:16px;font-size:10px;color:#a0a7bd;text-align:center">รายงานนี้สร้างโดยระบบ JavaXd · ${new Date().toLocaleString('th-TH')}</div>
+    </div>`;
+    BS.modal({title:'ตัวอย่างรายงานก่อนส่งออก',sub:'ตรวจสอบความถูกต้องก่อนพิมพ์หรือดาวน์โหลด PDF',w:640,flush:true,
+      body:`<div style="background:#eef0f6;padding:24px;display:flex;justify-content:center">${sheet}</div>`,
+      foot:`<button class="btn btn-ghost" onclick="BS.closeModal()">ปิด</button>
+        <button class="btn btn-ghost" onclick="BS.toast('ส่งออกไฟล์ Excel แล้ว')">${svg('down')} Excel</button>
+        <button class="btn btn-pri" onclick="printRep()">${svg('print')} พิมพ์ / ดาวน์โหลด PDF</button>`});
+  };
+  window.printRep=function(){
+    const s=document.getElementById('repSheet');if(!s)return;
+    document.getElementById('printArea').innerHTML=s.outerHTML;
+    BS.toast('กำลังเตรียมไฟล์...');setTimeout(()=>window.print(),300);
+  };
+};
+</script>
+<script src="../assets/api.js?v=2"></script>
+<script src="../assets/shell.js?v=8"></script>
+</body>
+</html>

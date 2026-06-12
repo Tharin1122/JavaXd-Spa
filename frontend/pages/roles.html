@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 21c-4.5 0-8-2.6-8-6 0 0 2.4.4 4 1.6C10.7 11.7 12 9 12 9s1.3 2.7 4 7.6c1.6-1.2 4-1.6 4-1.6 0 3.4-3.5 6-8 6Z' fill='%236c5ce7'/></svg>">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JavaXd · สิทธิ์การใช้งาน</title>
+<link rel="stylesheet" href="../assets/theme.css?v=1">
+<style>
+.role-card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:18px;cursor:pointer;transition:.15s}
+.role-card:hover,.role-card.on{border-color:var(--brand);box-shadow:var(--shadow-lg)}
+.role-card.on{background:var(--brand-soft)}
+.matrix th:first-child{width:38%}
+.tg{width:42px;height:24px;border-radius:14px;background:#dde0ea;position:relative;cursor:pointer;transition:.2s;display:inline-block}
+.tg::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.tg.on{background:var(--brand)}.tg.on::after{left:21px}
+.tg.part{background:#f5a623}.tg.part::after{left:12px}
+.matrix td.sel,.matrix th.sel{background:var(--brand-soft)}
+.legend-dot{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-2);margin-right:14px}
+.legend-dot .tg{transform:scale(.8);pointer-events:none}
+#previewBar{position:fixed;left:50%;transform:translateX(-50%);bottom:22px;z-index:200;background:#1c2138;color:#fff;border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.4);padding:13px 16px 13px 20px;display:none;align-items:center;gap:14px;font-size:13.5px}
+#previewBar b{color:#c4b8ff}
+#previewBar button{background:var(--brand-grad);color:#fff;border-radius:10px;padding:8px 16px;font-weight:600;font-size:12.5px}
+</style>
+</head>
+<body data-title="สิทธิ์การใช้งาน (Roles)">
+
+<template id="page">
+  <div class="page-h">
+    <div class="ttl"><h2>สิทธิ์การใช้งาน (Roles &amp; Permissions)</h2><p>กำหนดบทบาทและสิทธิ์การเข้าถึงของพนักงานแต่ละคน</p></div>
+    <div class="sp"><button class="btn btn-pri" onclick="newRole()" data-i="plus">สร้างบทบาท</button></div>
+  </div>
+
+  <div class="grid-4 mb24" id="roles"></div>
+
+  <div class="card card-pad">
+    <div class="card-h"><h3>ตารางสิทธิ์การเข้าถึง</h3>
+      <span class="sp legend-dot"><span class="tg on"></span>เข้าถึงได้</span><span class="legend-dot"><span class="tg part"></span>ดูได้อย่างเดียว</span><span class="legend-dot"><span class="tg"></span>ไม่มีสิทธิ์</span>
+      <button class="btn btn-ghost btn-sm" onclick="previewRole()" id="pvBtn"></button>
+      <button class="btn btn-pri btn-sm" id="saveBtn" onclick="saveMatrix()">บันทึก</button></div>
+    <table class="tbl matrix" id="matrix"></table>
+  </div>
+
+  <div id="previewBar"><span>กำลังดูเมนูในมุมมอง: <b id="pvRole"></b> · เมนูที่ไม่มีสิทธิ์ถูกซ่อน · สีจาง = ดูได้อย่างเดียว</span><button onclick="exitPreview()">ออกจากมุมมองตัวอย่าง</button></div>
+</template>
+
+<script>window.BASE='../';window.PAGE='roles';</script>
+<script>if(!localStorage.getItem('th_auth'))location.href=(window.BASE||'')+'login.html';</script>
+<script>
+window.PAGE_INIT=function(){
+  document.querySelectorAll('[data-i]').forEach(e=>{const t=e.textContent.trim();e.innerHTML=svg(e.dataset.i)+(t?'<span>'+t+'</span>':'')});
+
+  let selRole=1;
+  const ICON={Owner:['ic-purple','shield'],Manager:['ic-blue','badge'],Reception:['ic-green','users'],Therapist:['ic-orange','spa']};
+  const RDESC={Owner:'เข้าถึงทุกอย่าง',Manager:'จัดการร้าน + รายงาน',Reception:'จองคิว + ชำระเงิน',Therapist:'ดูคิวตัวเอง'};
+  let R=[['Owner / เจ้าของ','','ic-purple','shield',0],['Manager / ผู้จัดการ','','ic-blue','badge',0],['Reception / แอดมิน','','ic-green','users',0],['Therapist / หมอนวด','','ic-orange','spa',0]];
+  function renderRoles(){document.getElementById('roles').innerHTML=R.map((r,i)=>`
+    <div class="role-card${i===1?' on':''}">
+      <div class="flex ac jb"><div class="ic ${r[2]}" style="width:42px;height:42px;border-radius:12px;display:grid;place-items:center;color:#fff">${svg(r[3])}</div><span class="badge b-gray">${r[4]} คน</span></div>
+      <div style="font-weight:700;font-size:15px;margin-top:12px">${r[0]}</div>
+      <div class="sub" style="font-size:12.5px;margin-top:3px">${r[1]}</div>
+    </div>`).join('');
+    document.querySelectorAll('.role-card').forEach((c,i)=>c.onclick=()=>selectRole(i));selectRole(selRole);}
+
+  // ดึงบทบาทจริง + นับสมาชิกจาก /user
+  (async()=>{try{
+    const [roles,users]=await Promise.all([API.get('/user/roles'),API.get('/user')]);
+    const order=['Owner','Manager','Reception','Therapist'];
+    const count={};(users||[]).forEach(u=>(u.roles||[]).forEach(rn=>{count[rn]=(count[rn]||0)+1;}));
+    const labelTh={Owner:'Owner / เจ้าของ',Manager:'Manager / ผู้จัดการ',Reception:'Reception / แอดมิน',Therapist:'Therapist / หมอนวด'};
+    R=order.filter(n=>roles.some(r=>r.name===n)||true).map(n=>{const ic=ICON[n]||['ic-purple','shield'];const rr=(roles||[]).find(x=>x.name===n);return [labelTh[n]||n,(rr&&rr.description)||RDESC[n]||'',ic[0],ic[1],count[n]||0];});
+    renderRoles();
+  }catch(e){console.error('roles',e);renderRoles();}})();
+  renderRoles();
+
+  // permission matrix · แต่ละแถวผูกกับเมนูจริง (nav) เพื่อใช้ในโหมดทดลองมุมมอง
+  const perms=[
+    ['แดชบอร์ด & ภาพรวม',[1,1,1,2],['index.html']],
+    ['การจอง & คิวงาน',[1,1,1,2],['bookings.html','schedule.html']],
+    ['จัดการลูกค้า',[1,1,1,0],['customers.html']],
+    ['บริการ & คอร์ส',[1,1,2,0],['services.html']],
+    ['หมอนวด / พนักงาน',[1,1,0,0],['staff.html']],
+    ['การเงิน & ใบเสร็จ (POS)',[1,1,2,0],['finance.html','pos.html']],
+    ['แพ็กเกจ & โปรโมชัน',[1,1,2,0],['packages.html']],
+    ['สต็อกสินค้า',[1,1,1,0],['inventory.html']],
+    ['รายงาน & วิเคราะห์',[1,1,0,0],['reports.html','logs.html']],
+    ['ตั้งค่าระบบ & สิทธิ์',[1,0,0,0],['settings.html','roles.html','subscription.html']],
+  ];
+  const st=v=>v===1?'tg on':v===2?'tg part':'tg';
+  // M[row][col] = ระดับสิทธิ์ (1=เข้าถึงได้ 2=ดูได้อย่างเดียว 0=ไม่มีสิทธิ์) — ค่าเริ่มต้นจาก perms
+  let M=perms.map(p=>p[1].slice());
+  function renderMatrix(){
+    document.getElementById('matrix').innerHTML=
+      '<thead><tr><th>โมดูล / ฟังก์ชัน</th>'+['Owner','Manager','Reception','Therapist'].map((n,c)=>`<th style="text-align:center" data-c="${c}">${n}</th>`).join('')+'</tr></thead><tbody>'+
+      perms.map((p,r)=>`<tr><td style="font-weight:500">${p[0]}</td>${M[r].map((v,c)=>`<td style="text-align:center" data-c="${c}"><span class="${st(v)}" title="คลิกเพื่อสลับระดับสิทธิ์" onclick="cyclePerm(${r},${c})"></span></td>`).join('')}</tr>`).join('')+'</tbody>';
+    selectRole(selRole);
+  }
+  // คลิกวน: เข้าถึงได้(1) → ดูได้อย่างเดียว(2) → ไม่มีสิทธิ์(0) → เข้าถึงได้(1)
+  window.cyclePerm=function(r,c){const next={1:2,2:0,0:1};M[r][c]=next[M[r][c]];renderMatrix();markDirty();};
+  let dirty=false;
+  function markDirty(){if(dirty)return;dirty=true;const b=document.getElementById('saveBtn');if(b){b.innerHTML=svg('check')+'<span>บันทึก *</span>';}}
+
+  // โหลด matrix ที่บันทึกไว้จาก DB (ถ้ามี) มาทับค่าเริ่มต้น
+  (async()=>{try{const saved=await API.get('/role/matrix');
+    if(Array.isArray(saved)&&saved.length){M=perms.map((p,r)=>Array.isArray(saved[r])?p[1].map((_,c)=>saved[r][c]==null?p[1][c]:saved[r][c]):p[1].slice());renderMatrix();}
+  }catch(e){console.error('matrix load',e);}})();
+  renderMatrix();
+
+  window.saveMatrix=async function(){const b=document.getElementById('saveBtn');b.disabled=true;
+    try{await API.put('/role/matrix',M);dirty=false;b.innerHTML=svg('check')+'<span>บันทึก</span>';BS.toast('บันทึกสิทธิ์การเข้าถึงลงระบบแล้ว','check');}
+    catch(e){BS.toast('บันทึกไม่สำเร็จ: '+(e.message||''),'x');}
+    finally{b.disabled=false;}
+  };
+
+  /* เลือก role → ไฮไลต์คอลัมน์ในตาราง + ปุ่มทดลองมุมมอง */
+  function selectRole(i){
+    selRole=i;
+    document.querySelectorAll('.role-card').forEach((x,k)=>x.classList.toggle('on',k===i));
+    document.querySelectorAll('#matrix [data-c]').forEach(el=>el.classList.toggle('sel',+el.dataset.c===i));
+    document.getElementById('pvBtn').innerHTML=svg('eye')+'<span>ทดลองมุมมอง '+R[i][0].split(' / ')[0]+'</span>';
+  }
+  document.querySelectorAll('.role-card').forEach((c,i)=>c.onclick=()=>selectRole(i));
+  selectRole(1);
+
+  /* โหมดทดลองมุมมอง: ซ่อน/หรี่เมนู sidebar ตามสิทธิ์ของ role ที่เลือก
+     TODO(Backend): ของจริงบังคับที่ middleware + ซ่อนเมนูตาม role ของ user ที่ล็อกอิน */
+  window.previewRole=function(){
+    document.querySelectorAll('.side .nav-item').forEach(a=>{
+      const href=(a.getAttribute('href')||'').split('/').pop();
+      const ri=perms.findIndex(p=>p[2].includes(href));
+      if(ri<0)return;
+      const v=M[ri][selRole];
+      a.style.display=v===0?'none':'';
+      a.style.opacity=v===2?'.45':'';
+      const sub=a.nextElementSibling;
+      if(sub&&sub.classList.contains('nav-sub'))sub.style.display=v===0?'none':'';
+    });
+    document.getElementById('pvRole').textContent=R[selRole][0];
+    document.getElementById('previewBar').style.display='flex';
+    BS.toast('กำลังแสดงเมนูในมุมมอง '+R[selRole][0],'eye');
+  };
+  window.exitPreview=function(){
+    document.querySelectorAll('.side .nav-item').forEach(a=>{a.style.display='';a.style.opacity='';const sub=a.nextElementSibling;if(sub&&sub.classList.contains('nav-sub'))sub.style.display=''});
+    document.getElementById('previewBar').style.display='none';
+    BS.toast('กลับสู่มุมมอง Owner ปกติ');
+  };
+
+  window.newRole=function(){
+    const mods=perms.map(p=>p[0]);
+    BS.modal({title:'สร้างบทบาทใหม่',sub:'กำหนดชื่อและสิทธิ์การเข้าถึง',w:480,
+      body:`<div class="grid2"><div class="field"><label>ชื่อบทบาท</label><input placeholder="เช่น แคชเชียร์"></div>
+        <div class="field"><label>คัดลอกสิทธิ์จาก</label><select><option>— เริ่มจากศูนย์ —</option>${R.map(r=>`<option>${r[0]}</option>`).join('')}</select></div></div>
+      <div class="field"><label>สิทธิ์การเข้าถึง</label>
+        <div style="display:flex;flex-direction:column;gap:2px">${mods.map((m,i)=>`<div class="flex ac jb" style="padding:8px 0;border-bottom:1px solid var(--line)"><span style="font-size:13px;font-weight:500">${m}</span><span class="tg${i<3?' on':''}" onclick="this.classList.toggle('on')"></span></div>`).join('')}</div></div>`,
+      foot:`<button class="btn btn-ghost" onclick="BS.closeModal()">ยกเลิก</button><button class="btn btn-pri" onclick="BS.closeModal();BS.toast('สร้างบทบาทใหม่เรียบร้อยแล้ว')">${svg('check')} สร้างบทบาท</button>`});
+  };
+};
+</script>
+<script src="../assets/api.js?v=2"></script>
+<script src="../assets/shell.js?v=8"></script>
+</body>
+</html>

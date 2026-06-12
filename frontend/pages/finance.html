@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 21c-4.5 0-8-2.6-8-6 0 0 2.4.4 4 1.6C10.7 11.7 12 9 12 9s1.3 2.7 4 7.6c1.6-1.2 4-1.6 4-1.6 0 3.4-3.5 6-8 6Z' fill='%236c5ce7'/></svg>">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JavaXd · การเงิน</title>
+<link rel="stylesheet" href="../assets/theme.css?v=1">
+<style>
+.bars{display:flex;align-items:flex-end;gap:14px;height:220px;padding-top:10px}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end}
+.bar-pair{display:flex;gap:4px;align-items:flex-end;height:100%;width:100%;justify-content:center}
+.bar{width:14px;border-radius:6px 6px 0 0;transition:.4s;position:relative}
+.bar.inc{background:var(--brand-grad)}.bar.exp{background:#f0b6bc}
+.bar-x{font-size:11.5px;color:var(--ink-3)}
+.pm-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.pm-row:last-child{border-bottom:none}
+.pm-ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;flex:0 0 38px}
+.flowtag{display:inline-flex;align-items:center;gap:6px;font-weight:600}
+</style>
+</head>
+<body data-title="การเงิน">
+
+<template id="page">
+  <div class="page-h">
+    <div class="ttl"><h2>การเงิน · รายรับ - รายจ่าย</h2><p>ภาพรวมรายได้ ค่าใช้จ่าย และใบเสร็จ ประจำเดือนพฤษภาคม 2567</p></div>
+    <div class="sp">
+      <div class="seg"><button>วัน</button><button>สัปดาห์</button><button class="on">เดือน</button><button>ปี</button></div>
+      <button class="btn btn-ghost" onclick="exportReport()" data-i="down">ส่งออกรายงาน</button>
+      <button class="btn btn-pri" onclick="dailyClose()" data-i="receipt">ปิดยอดสิ้นวัน</button>
+    </div>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat"><div class="row1"><div class="ic ic-green" data-i="money"></div><span class="tt">รายรับรวม</span></div><div class="val">412,950 <small>฿</small></div><div class="row3"><span class="from">215 การจอง</span><span class="trend up">8.3%</span></div></div>
+    <div class="stat"><div class="row1"><div class="ic ic-orange" data-i="wallet"></div><span class="tt">รายจ่ายรวม</span></div><div class="val">85,320 <small>฿</small></div><div class="row3"><span class="from">ค่ามือ + ของใช้</span><span class="trend down">2.1%</span></div></div>
+    <div class="stat"><div class="row1"><div class="ic ic-purple" data-i="chart"></div><span class="tt">กำไรสุทธิ</span></div><div class="val">327,630 <small>฿</small></div><div class="row3"><span class="from">อัตรากำไร 79%</span><span class="trend up">11%</span></div></div>
+    <div class="stat"><div class="row1"><div class="ic ic-blue" data-i="cal"></div><span class="tt">ยอดเฉลี่ย/บิล</span></div><div class="val">1,920 <small>฿</small></div><div class="row3"><span class="from">เพิ่มขึ้นจากเดือนก่อน</span></div></div>
+  </div>
+
+  <div class="grid-2 mb24" style="grid-template-columns:1.6fr 1fr">
+    <div class="card card-pad" id="flow">
+      <div class="card-h"><h3>รายรับ - รายจ่ายรายวัน</h3>
+        <div class="sp flex g16 ac" style="font-size:12.5px">
+          <span class="flowtag"><span style="width:11px;height:11px;border-radius:3px;background:var(--brand);display:inline-block"></span>รายรับ</span>
+          <span class="flowtag"><span style="width:11px;height:11px;border-radius:3px;background:#f0b6bc;display:inline-block"></span>รายจ่าย</span>
+        </div>
+      </div>
+      <div class="bars" id="bars"></div>
+    </div>
+    <div class="card card-pad">
+      <div class="card-h"><h3>ช่องทางชำระเงิน</h3></div>
+      <div id="pm"></div>
+    </div>
+  </div>
+
+  <div class="grid-2" style="grid-template-columns:1fr 1.2fr" id="bills">
+    <div class="card card-pad">
+      <div class="card-h"><h3>โครงสร้างรายจ่าย</h3></div>
+      <div id="exp"></div>
+    </div>
+    <div class="card card-pad">
+      <div class="card-h"><h3>ใบเสร็จ / รายการล่าสุด</h3><a class="sp link" href="pos.html">+ ออกบิลใหม่ (POS)</a></div>
+      <table class="tbl" id="bill-tbl"></table>
+    </div>
+  </div>
+</template>
+
+<script>window.BASE='../';window.PAGE='finance';</script>
+<script>if(!localStorage.getItem('th_auth'))location.href=(window.BASE||'')+'login.html';</script>
+<script>
+window.PAGE_INIT=function(){
+  document.querySelectorAll('[data-i]').forEach(e=>{const t=e.textContent.trim();e.innerHTML=svg(e.dataset.i)+(t?'<span>'+t+'</span>':'')});
+  const methodTh={Cash:['เงินสด','#22b07d'],Transfer:['โอน / พร้อมเพย์','#3b9bff'],QR:['QR พร้อมเพย์','#06c755'],Card:['บัตรเครดิต','#8b7cf0']};
+  let BILLS=[]; let BILL_TOTAL=0;
+
+  async function load(){
+    let rev,pays,exp;
+    try{ rev=await API.get('/report/revenue?groupBy=day'); }catch(e){console.error('revenue',e);}
+    try{ const r=await API.get('/payment?pageSize=12'); pays=(r&&r.items)||[]; BILL_TOTAL=(r&&r.total)||pays.length; }catch(e){console.error('payments',e);}
+    try{ exp=await API.get('/expense'); }catch(e){console.error('expense',e);}
+    const expTotal=(exp&&exp.total)||0;
+
+    if(rev){
+      const s=rev.summary;
+      const v=document.querySelectorAll('.stat-grid .val');
+      if(v[0])v[0].innerHTML=fmt(s.totalRevenue)+' <small>฿</small>';
+      if(v[1])v[1].innerHTML=fmt(expTotal)+' <small>฿</small>';
+      if(v[2])v[2].innerHTML=fmt(s.totalRevenue-expTotal)+' <small>฿</small>';
+      if(v[3])v[3].innerHTML=fmt(Math.round(s.avgPerReceipt))+' <small>฿</small>';
+      const froms=document.querySelectorAll('.stat-grid .from');
+      if(froms[0])froms[0].textContent=s.totalReceipts+' บิล';
+      if(froms[1])froms[1].textContent=(exp&&exp.byCategory?exp.byCategory.length:0)+' หมวด';
+      if(froms[2])froms[2].textContent='รายรับ − รายจ่าย';
+      if(froms[3])froms[3].textContent='ต่อบิล';
+      document.querySelectorAll('.stat-grid .trend').forEach(t=>t.remove());
+      // การ์ดคลิกดูรายละเอียดได้ (reuse BS.statDetails เหมือนหน้าสต็อก)
+      const byM=(s.byMethod||[]);const expCats=(exp&&exp.byCategory)||[];
+      BS.statDetails([
+        {title:'รายรับรวม · '+fmt(s.totalRevenue)+' ฿',sub:s.totalReceipts+' บิล · แยกตามช่องทางชำระ',rows:byM.length?byM.map(m=>[(methodTh[m.method]||[m.method])[0]+' · '+m.count+' บิล',fmt(m.amount)+' ฿']):[['ยังไม่มีรายการ','—']]},
+        {title:'รายจ่ายรวม · '+fmt(expTotal)+' ฿',sub:'แยกตามหมวดหมู่',rows:expCats.length?expCats.map(c=>[c.category,fmt(c.amount)+' ฿']):[['ยังไม่มีรายจ่าย','—']]},
+        {title:'กำไรสุทธิ · '+fmt(s.totalRevenue-expTotal)+' ฿',sub:'ที่มาของตัวเลข',rows:[['รายรับรวม',fmt(s.totalRevenue)+' ฿','#178a61'],['หักรายจ่าย','-'+fmt(expTotal)+' ฿','var(--red)'],['คงเหลือสุทธิ',fmt(s.totalRevenue-expTotal)+' ฿','var(--brand-700)'],['อัตรากำไร',s.totalRevenue?Math.round((s.totalRevenue-expTotal)/s.totalRevenue*100)+'%':'—']]},
+        {title:'ยอดเฉลี่ยต่อบิล · '+fmt(Math.round(s.avgPerReceipt))+' ฿',sub:'ภาพรวมบิล',rows:[['จำนวนบิลทั้งหมด',s.totalReceipts+' บิล'],['รายรับรวม',fmt(s.totalRevenue)+' ฿'],['เฉลี่ยต่อบิล',fmt(Math.round(s.avgPerReceipt))+' ฿','var(--brand-700)']]},
+      ]);
+      // bars จาก series (รายวัน)
+      const series=rev.series||[];
+      const max=Math.max(1,...series.map(x=>x.revenue));
+      document.getElementById('bars').innerHTML=series.length?series.map(d=>`
+        <div class="bar-col"><div class="bar-pair">
+          <div class="bar inc" style="height:${d.revenue/max*100}%" title="${fmt(d.revenue)} ฿"></div>
+        </div><div class="bar-x">${(d.label||'').split(' ')[0]}</div></div>`).join(''):'<div style="color:var(--ink-3);padding:30px">ยังไม่มีข้อมูลรายรับเดือนนี้</div>';
+      // payment methods
+      const total=s.totalRevenue||1;
+      document.getElementById('pm').innerHTML=(s.byMethod||[]).length?(s.byMethod).map(m=>{const mt=methodTh[m.method]||[m.method,'#888'];const pct=Math.round(m.amount/total*100);return `
+        <div class="pm-row"><div class="pm-ic" style="background:${mt[1]}22;color:${mt[1]}">${svg('wallet')}</div>
+          <div style="flex:1"><div style="font-weight:600;font-size:13.5px">${mt[0]}</div><div class="prog" style="margin-top:6px"><i style="width:${pct}%;background:${mt[1]}"></i></div></div>
+          <div style="text-align:right"><b style="font-weight:600">${fmt(m.amount)}</b><div class="sub" style="font-size:11.5px">${pct}% · ${m.count} บิล</div></div></div>`}).join(''):'<div style="color:var(--ink-3);padding:20px">ยังไม่มีรายการชำระเงิน</div>';
+    }
+
+    // expense breakdown — จาก /expense จริง
+    const EXC=['#8b7cf0','#3ea8c9','#e6a23c','#7cc47a','#f08aa8','#f0b07a'];
+    const cats=(exp&&exp.byCategory)||[];
+    const expCard=document.getElementById('exp').closest('.card');
+    const ch=expCard&&expCard.querySelector('.card-h');
+    if(ch&&!ch.querySelector('.add-exp'))ch.insertAdjacentHTML('beforeend','<a class="sp link add-exp" style="cursor:pointer" onclick="addExpense()">+ เพิ่มรายจ่าย</a>');
+    document.getElementById('exp').innerHTML=cats.length?cats.map((c,i)=>{const pct=expTotal?Math.round(c.amount/expTotal*100):0;return `
+      <div style="margin-bottom:16px"><div class="flex ac jb" style="margin-bottom:7px"><span style="font-weight:500">${c.category}</span><b>${fmt(c.amount)} ฿</b></div>
+      <div class="prog"><i style="width:${pct}%;background:${EXC[i%EXC.length]}"></i></div></div>`}).join(''):'<div style="text-align:center;padding:24px;color:var(--ink-3);background:var(--card-2);border:1px dashed var(--line);border-radius:12px">ยังไม่มีรายจ่ายเดือนนี้ · กด "+ เพิ่มรายจ่าย"</div>';
+
+    // recent bills
+    BILLS=pays||[];
+    renderBills();
+  }
+  function renderBills(){
+    document.getElementById('bill-tbl').innerHTML=
+      '<thead><tr><th>เลขที่</th><th>ลูกค้า</th><th>ช่องทาง</th><th style="text-align:right">ยอด</th><th>สถานะ</th></tr></thead><tbody>'+
+      (BILLS.length?BILLS.map(b=>{const mt=methodTh[b.paymentMethod]||[b.paymentMethod,'#888'];const nm=(b.customer&&b.customer.displayName)||'-';const paid=b.status===1;return `<tr style="cursor:pointer" onclick="reprintBill('${b.id}')"><td><b style="font-weight:600">${b.receiptNo||'—'}</b><div class="sub">${API.fmtDate(b.paidAt)}</div></td>
+        <td><div class="cell-u">${av(nm,30)}<span>${nm}</span></div></td>
+        <td><span class="badge b-gray">${mt[0]}</span></td>
+        <td style="text-align:right;font-weight:600">${fmt(b.totalAmount)} ฿</td>
+        <td><span class="badge ${paid?'b-green':'b-gray'}">${paid?'ชำระแล้ว':'คืนเงิน'}</span></td></tr>`}).join(''):'<tr><td colspan="5" style="text-align:center;color:var(--ink-3);padding:30px">ยังไม่มีใบเสร็จ</td></tr>')
+      +(BILLS.length<BILL_TOTAL?`<tr><td colspan="5" style="text-align:center;padding:12px"><button class="btn btn-ghost" onclick="loadMoreBills()">โหลดเพิ่ม (แสดง ${BILLS.length}/${BILL_TOTAL} บิล)</button></td></tr>`:'')
+      +'</tbody>';
+  }
+  window.loadMoreBills=async function(){
+    try{const r=await API.get('/payment?pageSize=12&offset='+BILLS.length);BILLS=BILLS.concat((r&&r.items)||[]);BILL_TOTAL=(r&&r.total)||BILLS.length;renderBills();}
+    catch(e){BS.toast('โหลดเพิ่มไม่สำเร็จ','x');}
+  };
+  load();
+
+  window.reprintBill=async function(id){
+    try{const b=await API.get('/payment/'+id);const mt=methodTh[b.paymentMethod]||[b.paymentMethod];
+      BS.invoice({no:b.receiptNo,date:API.fmtDate(b.paidAt),cashier:'',customer:(b.customer&&b.customer.displayName)||'ลูกค้า',
+        items:(b.items||[]).map(it=>({name:it.serviceName,qty:it.quantity,price:it.unitPrice})),
+        discount:b.discountAmount?{label:'ส่วนลด',amount:b.discountAmount}:null,method:mt[0],paid:b.paidAmount});
+    }catch(e){BS.toast('โหลดใบเสร็จไม่สำเร็จ','x');}
+  };
+  window.exportReport=function(){ window.print(); };
+  // ===== ปิดยอดสิ้นวัน (Z-Report) — สรุปเงินทุกช่องทาง + รายจ่าย พิมพ์แปะเก็บได้ =====
+  const methodNameTh={Cash:'เงินสด',Transfer:'เงินโอน',QR:'QR พร้อมเพย์',Card:'บัตรเครดิต'};
+  window.dailyClose=async function(date){
+    BS.modal({title:'ปิดยอดสิ้นวัน',sub:'กำลังรวบรวมยอด...',w:520,body:'<div style="padding:24px;text-align:center;color:var(--ink-3)">กำลังโหลด...</div>'});
+    let d;try{d=await API.get('/report/daily-close'+(date?('?date='+date):''));}catch(e){BS.toast('โหลดไม่สำเร็จ: '+e.message,'x');return;}
+    const row=(l,v,c)=>`<div class="flex ac jb" style="padding:7px 0;border-bottom:1px dashed var(--line-2);font-size:13px"><span style="color:var(--ink-2)">${l}</span><b style="${c?'color:'+c:''}">${v}</b></div>`;
+    const body=`<div id="zSheet">
+      <div class="flex ac jb" style="margin-bottom:10px"><div><div style="font-weight:800;font-size:15px">สรุปยอดประจำวัน</div><div class="sub" style="font-size:12px">${API.fmtDate(d.date)} · ${d.billCount} บิล · คิว ${d.queueCount} คิว</div></div>
+        <input type="date" value="${d.date}" onchange="BS.closeModal();dailyClose(this.value)" style="height:34px;border:1px solid var(--line);border-radius:9px;padding:0 9px;font-family:inherit;font-size:12.5px"></div>
+      <div style="background:var(--card-2);border:1px solid var(--line);border-radius:12px;padding:12px 15px;margin-bottom:12px">
+        ${(d.byMethod||[]).map(m=>row(methodNameTh[m.method]||m.method,fmt(m.amount)+' ฿')).join('')||'<div class="sub" style="font-size:12.5px;padding:6px 0">ยังไม่มีรายรับวันนี้</div>'}
+        ${d.totalDiscount?row('ส่วนลดรวม','-'+fmt(d.totalDiscount)+' ฿','var(--red)'):''}
+        ${row('<b>รายรับรวม</b>','<span style="font-size:16px">'+fmt(d.totalRevenue)+' ฿</span>','#178a61')}
+      </div>
+      ${(d.expenses&&d.expenses.length)?`<div style="font-weight:700;font-size:13px;margin:8px 0 4px">รายจ่ายวันนี้</div>${d.expenses.map(e=>row(e.category+(e.note?' · '+e.note:''),'-'+fmt(e.amount)+' ฿','var(--red)')).join('')}`:''}
+      ${row('<b>เงินสุทธิเข้าร้าน</b>','<span style="font-size:17px">'+fmt(d.netCash)+' ฿</span>','var(--brand-700)')}
+      ${(d.topItems&&d.topItems.length)?`<div style="font-weight:700;font-size:13px;margin:12px 0 4px">ขายดีวันนี้</div>${d.topItems.slice(0,5).map(t=>row(t.name+' × '+t.qty,fmt(t.amount)+' ฿')).join('')}`:''}
+    </div>`;
+    BS.modal({title:'ปิดยอดสิ้นวัน (Z-Report)',sub:'ตรวจเงินในลิ้นชักให้ตรงกับยอดนี้ก่อนปิดร้าน',w:520,body,
+      foot:`<button class="btn btn-ghost" onclick="BS.closeModal()">ปิด</button><button class="btn btn-pri" onclick="window.print()" data-i2="print">พิมพ์เก็บ</button>`});
+  };
+  window.addExpense=function(){
+    BS.modal({title:'เพิ่มรายจ่าย',sub:'บันทึกค่าใช้จ่ายของร้าน',w:440,
+      body:`<div class="field"><label>หมวดหมู่</label><select id="exCat"><option>ค่ามือหมอนวด</option><option>ของใช้ / วัตถุดิบ</option><option>ค่าเช่า / สาธารณูปโภค</option><option>การตลาด</option><option>อื่นๆ</option></select></div>
+        <div class="grid2"><div class="field"><label>จำนวนเงิน (บาท)</label><input id="exAmt" type="number" placeholder="0"></div><div class="field"><label>วันที่</label><input id="exDate" type="date"></div></div>
+        <div class="field"><label>หมายเหตุ</label><input id="exNote" placeholder="รายละเอียด"></div>`,
+      foot:`<button class="btn btn-ghost" onclick="BS.closeModal()">ยกเลิก</button><button class="btn btn-pri" onclick="window._saveExp()">${svg('check')} บันทึก</button>`});
+    setTimeout(()=>{const d=document.getElementById('exDate');if(d)d.value=(d=>new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10))(new Date());},30);
+    window._saveExp=async()=>{const cat=document.getElementById('exCat').value;const amt=parseFloat(document.getElementById('exAmt').value)||0;const note=document.getElementById('exNote').value.trim()||null;const date=document.getElementById('exDate').value;
+      if(amt<=0){BS.toast('ใส่จำนวนเงิน','x');return;}
+      try{await API.post('/expense',{category:cat,amount:amt,note,spentAt:date?date+'T12:00:00':null});BS.closeModal();BS.toast('บันทึกรายจ่ายแล้ว');await load();}catch(e){BS.toast('ไม่สำเร็จ: '+e.message,'x');}};
+  };
+};
+</script>
+<script src="../assets/api.js?v=2"></script>
+<script src="../assets/shell.js?v=8"></script>
+</body>
+</html>

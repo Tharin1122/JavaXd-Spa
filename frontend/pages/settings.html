@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 21c-4.5 0-8-2.6-8-6 0 0 2.4.4 4 1.6C10.7 11.7 12 9 12 9s1.3 2.7 4 7.6c1.6-1.2 4-1.6 4-1.6 0 3.4-3.5 6-8 6Z' fill='%236c5ce7'/></svg>">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JavaXd · ตั้งค่า</title>
+<link rel="stylesheet" href="../assets/theme.css?v=1">
+<style>
+.set-layout{display:grid;grid-template-columns:230px 1fr;gap:24px;align-items:start}
+@media(max-width:900px){.set-layout{grid-template-columns:1fr}}
+.set-nav{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:8px;position:sticky;top:90px}
+.set-nav a{display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:11px;font-size:13.5px;font-weight:500;color:var(--ink-2);cursor:pointer}
+.set-nav a svg{width:17px;height:17px}
+.set-nav a:hover{background:var(--card-2)}
+.set-nav a.on{background:var(--brand-soft);color:var(--brand-700);font-weight:600}
+.set-sec{display:none}.set-sec.on{display:block}
+.set-row{display:flex;align-items:center;gap:16px;padding:16px 0;border-bottom:1px solid var(--line)}
+.set-row:last-child{border-bottom:none}
+.set-row .info{flex:1}
+.set-row .info b{font-weight:600;font-size:14px}
+.set-row .info p{font-size:12.5px;color:var(--ink-3);margin-top:2px}
+.tg{width:46px;height:26px;border-radius:14px;background:#dde0ea;position:relative;cursor:pointer;transition:.2s;flex:0 0 46px}
+.tg::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.tg.on{background:var(--brand)}.tg.on::after{left:23px}
+.hours-row{display:grid;grid-template-columns:96px 130px 18px 130px 1fr auto;gap:12px;align-items:center;padding:11px 14px;border:1px solid var(--line);border-radius:13px;margin-bottom:9px;background:var(--card-2);transition:.15s}
+.hours-row:hover{border-color:var(--brand-soft)}
+.hours-row.off{opacity:.55;background:#f3f4f9}
+.hours-row .dy{font-weight:600;font-size:13.5px}
+.hours-row .dy small{display:block;font-weight:400;font-size:11px;color:var(--ink-3)}
+.hours-row input[type=time]{height:40px;border:1px solid var(--line-2);border-radius:10px;padding:0 10px;font-family:inherit;font-size:13px;background:#fff;width:100%}
+.hours-row input[type=time]:focus{outline:none;border-color:var(--brand)}
+.hours-row .to{color:var(--ink-3);text-align:center;font-size:12.5px}
+.hours-row .closed-tag{font-size:12px;color:var(--red);font-weight:600}
+.hours-row .open-tag{font-size:12px;color:#178a61;font-weight:600}
+.hr-tools{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+</style>
+</head>
+<body data-title="ตั้งค่า">
+
+<template id="page">
+  <div class="page-h">
+    <div class="ttl"><h2>ตั้งค่าระบบ</h2><p>กำหนดค่าการทำงานของร้าน การเชื่อมต่อ และการแจ้งเตือน</p></div>
+    <div class="sp"><button class="btn btn-pri" onclick="saveSettings()" data-i="check">บันทึก</button></div>
+  </div>
+
+  <div class="set-layout">
+    <nav class="set-nav" id="set-nav">
+      <a class="on" data-s="shop" data-ic="spa">ข้อมูลร้าน</a>
+      <a data-s="hours" data-ic="clock">เวลาทำการ</a>
+      <a data-s="line" data-ic="line">เชื่อมต่อ Line OA</a>
+      <a data-s="pay" data-ic="wallet">การชำระเงิน</a>
+      <a data-s="notif" data-ic="bell">การแจ้งเตือน</a>
+      <a data-s="booking" data-ic="cal">กฎการจอง</a>
+    </nav>
+
+    <div>
+      <!-- shop -->
+      <div class="set-sec on" id="s-shop">
+        <div class="card card-pad">
+          <div class="card-h"><h3>ข้อมูลร้าน</h3></div>
+          <div class="flex ac g16" style="margin-bottom:20px">
+            <div class="mark" id="logoMark" style="width:64px;height:64px;border-radius:18px;background:var(--brand-grad);display:grid;place-items:center;color:#fff;background-size:cover;background-position:center;cursor:pointer" onclick="document.getElementById('logoFile').click()"><svg viewBox="0 0 24 24" style="width:34px;height:34px"></svg></div>
+            <div><button class="btn btn-ghost btn-sm" onclick="document.getElementById('logoFile').click()">เปลี่ยนโลโก้</button>
+              <button class="btn btn-ghost btn-sm" onclick="window._clearLogo()" id="logoClear" style="display:none;color:var(--red)">ลบ</button>
+              <p class="sub" style="font-size:12px;margin-top:6px">PNG/JPG สูงสุด 1MB · บันทึกลงระบบจริง</p></div>
+            <input type="file" id="logoFile" accept="image/png,image/jpeg" hidden>
+            <input type="hidden" id="logoData">
+          </div>
+          <div class="grid2"><div class="field"><label>ชื่อร้าน</label><input value="JavaXd Massage &amp; Spa"></div>
+            <div class="field"><label>เบอร์โทร</label><input value="02-123-4567"></div></div>
+          <div class="field" style="margin-top:14px"><label>ที่อยู่</label><textarea rows="2">123/45 ถนนสุขุมวิท แขวงคลองตัน เขตคลองเตย กรุงเทพฯ 10110</textarea></div>
+          <div class="grid2" style="margin-top:14px"><div class="field"><label>เลขประจำตัวผู้เสียภาษี</label><input value="0-1055-12345-67-8"></div>
+            <div class="field"><label>สกุลเงิน</label><select><option>บาท (THB)</option></select></div></div>
+        </div>
+      </div>
+
+      <!-- hours -->
+      <div class="set-sec" id="s-hours">
+        <div class="card card-pad">
+          <div class="card-h"><h3>เวลาทำการ</h3><span class="sp muted" style="font-size:12.5px">มีผลกับตารางคิวและการจองออนไลน์</span></div>
+          <div class="hr-tools">
+            <button class="btn btn-ghost btn-sm" onclick="copyHours()">ใช้เวลาของวันจันทร์กับทุกวัน</button>
+            <button class="btn btn-ghost btn-sm" onclick="BS.toast('ตั้งวันหยุดนักขัตฤกษ์ (เพิ่มได้เมื่อเชื่อม API)')">+ วันหยุดพิเศษ</button>
+          </div>
+          <div id="hours"></div>
+        </div>
+      </div>
+
+      <!-- line -->
+      <div class="set-sec" id="s-line">
+        <div class="card card-pad">
+          <div class="card-h"><h3>เชื่อมต่อ Line Official Account</h3><span class="sp badge b-green">เชื่อมต่อแล้ว</span></div>
+          <div class="set-row"><div class="ic" style="width:46px;height:46px;border-radius:13px;background:#06c75522;color:#06c755;display:grid;place-items:center" data-i="line"></div>
+            <div class="info"><b>@javaxdspa</b><p>ผู้ติดตาม 3,842 คน · ใช้สำหรับแจ้งเตือนและจองคิวอัตโนมัติ</p></div>
+            <button class="btn btn-ghost btn-sm" onclick="manageLine()">จัดการ</button></div>
+          <div class="set-row"><div class="info"><b>แจ้งเตือนยืนยันการจอง</b><p>ส่งข้อความยืนยันเมื่อมีการจองสำเร็จ</p></div><span class="tg on" onclick="this.classList.toggle('on')"></span></div>
+          <div class="set-row"><div class="info"><b>แจ้งเตือนก่อนถึงนัด</b><p>เตือนลูกค้าล่วงหน้า 1 ชั่วโมง</p></div><span class="tg on" onclick="this.classList.toggle('on')"></span></div>
+          <div class="set-row"><div class="info"><b>จองคิวผ่าน Line (Rich Menu)</b><p>เปิดให้ลูกค้าจองคิวเองผ่าน Line OA</p></div><span class="tg on" onclick="this.classList.toggle('on')"></span></div>
+        </div>
+
+        <div class="card card-pad" style="margin-top:18px">
+          <div class="card-h"><h3>ข้อความอัตโนมัติถึงลูกค้า</h3><span class="sp muted" style="font-size:12.5px;margin-right:10px">ส่งอัตโนมัติตามเหตุการณ์</span>
+          <button class="btn btn-pri btn-sm" onclick="addMsg()">+ เพิ่มข้อความ</button></div>
+          <div id="autoMsgs"></div>
+        </div>
+      </div>
+
+      <!-- pay -->
+      <div class="set-sec" id="s-pay">
+        <div class="card card-pad" style="margin-bottom:16px">
+          <div class="card-h"><h3>QR พร้อมเพย์ของร้าน</h3><span class="badge b-green">ฟรี · เงินเข้าบัญชีร้านตรง</span></div>
+          <div class="grid2" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+            <div class="field"><label>เบอร์ PromptPay / เลขบัตรประชาชน</label><input id="np-promptpayId" data-key="promptpayId" placeholder="เช่น 0812345678 (ว่าง = โหมดเดโม่)"></div>
+            <div class="field"><label>เบอร์โทรร้าน (โชว์หน้าจองออนไลน์)</label><input id="np-shopPhone" data-key="shopPhone" placeholder="02-xxx-xxxx"></div>
+          </div>
+          <div class="sub" style="font-size:12px;margin-top:4px">ใส่เบอร์แล้วกดบันทึก → QR ใน POS จะรับเงินเข้าบัญชีนี้ทันที · gateway ยืนยันยอดอัตโนมัติ = รออนุมัติ (ดูข้อเสนอใน "สมองกล")</div>
+        </div>
+        <div class="card card-pad">
+          <div class="card-h"><h3>ช่องทางการชำระเงิน</h3></div>
+          <div id="pays"></div>
+        </div>
+      </div>
+
+      <!-- notif -->
+      <div class="set-sec" id="s-notif">
+        <div class="card card-pad">
+          <div class="card-h"><h3>การแจ้งเตือนภายในระบบ</h3></div>
+          <div id="notifs"></div>
+        </div>
+      </div>
+
+      <!-- booking -->
+      <div class="set-sec" id="s-booking">
+        <div class="card card-pad">
+          <div class="card-h"><h3>กฎการจองคิว</h3></div>
+          <div class="grid2"><div class="field"><label>ระยะเวลาขั้นต่ำต่อช่อง (นาที)</label><select><option>15</option><option selected>30</option><option>60</option></select></div>
+            <div class="field"><label>พักระหว่างคิว (นาที · เวลาทำความสะอาด/พักหมอนวด)</label><select><option>ไม่พัก</option><option selected>10</option><option>15</option><option>30</option></select></div></div>
+          <div class="grid2"><div class="field"><label>จองล่วงหน้าได้สูงสุด (วัน)</label><input value="30"></div>
+            <div class="field"><label>จองล่วงหน้าขั้นต่ำ (ชั่วโมง · กันจองกะทันหัน)</label><select><option>จองได้ทันที</option><option selected>1 ชั่วโมง</option><option>3 ชั่วโมง</option><option>1 วัน</option></select></div></div>
+          <div class="grid2"><div class="field"><label>จองได้สูงสุดต่อคนต่อวัน (คิว)</label><select><option>1</option><option selected>2</option><option>3</option><option>ไม่จำกัด</option></select></div>
+            <div class="field"><label>มัดจำการจองออนไลน์ (บาท)</label><input value="100"></div></div>
+          <div class="set-row" style="margin-top:6px"><div class="info"><b>อนุญาต Walk-in</b><p>รับลูกค้าหน้าร้านโดยไม่ต้องจองล่วงหน้า</p></div><span class="tg on" onclick="this.classList.toggle('on')"></span></div>
+          <div class="set-row"><div class="info"><b>ลูกค้าเลือกหมอนวดเองได้</b><p>แสดงรายชื่อหมอนวดให้เลือกตอนจองออนไลน์ (อาจมีค่าธรรมเนียมเพิ่ม)</p></div><span class="tg on" onclick="this.classList.toggle('on')"></span></div>
+          <div class="set-row"><div class="info"><b>ยืนยันการจองอัตโนมัติ</b><p>ปิด = พนักงานต้องกดอนุมัติก่อนคิวจึงจะยืนยัน</p></div><span class="tg on" onclick="this.classList.toggle('on')"></span></div>
+          <div class="set-row"><div class="info"><b>ยกเลิกฟรีก่อนถึงนัด</b><p>อนุญาตยกเลิกฟรีภายใน 2 ชั่วโมงก่อนนัด · หลังจากนั้นริบมัดจำ</p></div><span class="tg on" onclick="this.classList.toggle('on')"></span></div>
+          <div class="set-row"><div class="info"><b>จำกัดลูกค้าผิดนัดซ้ำ (No-show)</b><p>ผิดนัดเกิน 3 ครั้ง/เดือน → ต้องมัดจำก่อนจองครั้งถัดไป</p></div><span class="tg on" onclick="this.classList.toggle('on')"></span></div>
+          <div class="set-row"><div class="info"><b>รับคิวล่วงหน้าเกินเวลาปิด (Overtime)</b><p>รับคิวสุดท้ายที่จบไม่เกิน 30 นาทีหลังเวลาปิด</p></div><span class="tg" onclick="this.classList.toggle('on')"></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>window.BASE='../';window.PAGE='settings';</script>
+<script>if(!localStorage.getItem('th_auth'))location.href=(window.BASE||'')+'login.html';</script>
+<script>
+window.PAGE_INIT=function(){
+  // nav icons
+  document.querySelectorAll('#set-nav a').forEach(a=>a.insertAdjacentHTML('afterbegin',svg(a.dataset.ic)));
+  document.querySelectorAll('[data-i]').forEach(e=>{const t=e.textContent.trim();e.innerHTML=svg(e.dataset.i)+(t?'<span>'+t+'</span>':'')});
+  // logo glyph
+  document.querySelector('#s-shop .mark svg').innerHTML=ICONS.lotus;
+  // ===== เก็บ/โหลดการตั้งค่าจริงจาก /settings =====
+  function settingsControls(){const list=[];document.querySelectorAll('.set-sec').forEach(sec=>{sec.querySelectorAll('input,textarea,select,.tg').forEach((el,i)=>list.push({k:sec.id+'#'+i,el}));});return list;}
+  function settingsCollect(){const o={};settingsControls().forEach(({k,el})=>{o[k]=el.classList&&el.classList.contains('tg')?(el.classList.contains('on')?1:0):el.value;});o._hours=window.HRS?window.HRS.map(h=>({o:h.o,c:h.c,open:h.open})):null;o._msgs=window.MSGS?JSON.parse(JSON.stringify(window.MSGS)):null;
+    // named keys — backend ใช้ตรงๆ (promptpayId → QR, shopPhone → หน้าจองออนไลน์)
+    document.querySelectorAll('[data-key]').forEach(el=>{o[el.dataset.key]=el.value.trim()||null;});
+    return o;}
+  function settingsApply(o){if(!o||typeof o!=='object')return;
+    if(o._hours&&window.HRS){o._hours.forEach((h,i)=>{if(window.HRS[i]){window.HRS[i].o=h.o;window.HRS[i].c=h.c;window.HRS[i].open=h.open;}});window.RH&&window.RH();}
+    if(o._msgs&&window.MSGS&&window.renderMsgsSettings){window.MSGS.length=0;o._msgs.forEach(m=>window.MSGS.push(m));window.renderMsgsSettings();}
+    settingsControls().forEach(({k,el})=>{if(!(k in o))return;if(el.classList&&el.classList.contains('tg'))el.classList.toggle('on',!!o[k]);else el.value=o[k];});
+    document.querySelectorAll('[data-key]').forEach(el=>{if(o[el.dataset.key]!=null)el.value=o[el.dataset.key];});}
+  window.saveSettings=async function(){try{await API.put('/settings',settingsCollect());BS.toast('บันทึกการตั้งค่าเรียบร้อย');}catch(e){BS.toast('บันทึกไม่สำเร็จ: '+e.message,'x');}};
+  async function loadSettings(){try{const s=await API.get('/settings');settingsApply(s);applyLogo();}catch(e){console.error('settings load',e);}}
+  setTimeout(loadSettings,60);
+
+  // ===== โลโก้ร้าน — อัปโหลด → base64 → เก็บใน settings (#logoData ถูก collect อัตโนมัติ) =====
+  function applyLogo(){const data=document.getElementById('logoData').value;const mark=document.getElementById('logoMark');const clr=document.getElementById('logoClear');
+    if(data){mark.style.backgroundImage='url('+data+')';mark.querySelector('svg').style.display='none';if(clr)clr.style.display='';}
+    else{mark.style.backgroundImage='';const s=mark.querySelector('svg');if(s)s.style.display='';if(clr)clr.style.display='none';}}
+  window._clearLogo=function(){document.getElementById('logoData').value='';applyLogo();BS.toast('ลบโลโก้แล้ว · กดบันทึกเพื่อยืนยัน');};
+  document.getElementById('logoFile').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;
+    if(f.size>1024*1024){BS.toast('ไฟล์ใหญ่เกิน 1MB','x');return;}
+    const r=new FileReader();r.onload=()=>{document.getElementById('logoData').value=r.result;applyLogo();BS.toast('อัปโหลดโลโก้แล้ว · กดบันทึกเพื่อจัดเก็บ');};r.readAsDataURL(f);});
+
+  // hours — การ์ดรายวัน + เปิด/ปิด + คัดลอกเวลา
+  const days=['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'];
+  const hoursData=days.map((d,i)=>({d,o:'10:00',c:'22:00',open:true,busy:i>=5?'ลูกค้าเยอะ':''}));
+  function renderHours(){
+    document.getElementById('hours').innerHTML=hoursData.map((h,i)=>`
+      <div class="hours-row${h.open?'':' off'}">
+        <span class="dy">${h.d}${h.busy?`<small>${h.busy}</small>`:''}</span>
+        <input type="time" value="${h.o}" ${h.open?'':'disabled'} onchange="HRS[${i}].o=this.value">
+        <span class="to">—</span>
+        <input type="time" value="${h.c}" ${h.open?'':'disabled'} onchange="HRS[${i}].c=this.value">
+        <span class="${h.open?'open-tag':'closed-tag'}" style="justify-self:end">${h.open?'เปิดทำการ':'ปิดทำการ'}</span>
+        <span class="tg ${h.open?'on':''}" onclick="HRS[${i}].open=!HRS[${i}].open;RH()"></span>
+      </div>`).join('');
+  }
+  window.HRS=hoursData;window.RH=renderHours;
+  renderHours();
+  window.copyHours=function(){
+    hoursData.forEach(h=>{h.o=hoursData[0].o;h.c=hoursData[0].c;h.open=true});
+    renderHours();BS.toast('ใช้เวลา '+hoursData[0].o+' - '+hoursData[0].c+' กับทุกวันแล้ว');
+  };
+
+  // pays
+  const PAY=[['เงินสด','wallet','#22b07d',1],['โอน / พร้อมเพย์ QR','wallet','#3b9bff',1],['บัตรเครดิต / เดบิต','wallet','#8b7cf0',1],['Line Pay','line','#06c755',1],['ตัดจากคอร์ส / แพ็กเกจ','tag','#f5a623',1]];
+  document.getElementById('pays').innerHTML=PAY.map(p=>`
+    <div class="set-row"><div class="ic" style="width:42px;height:42px;border-radius:12px;background:${p[2]}22;color:${p[2]};display:grid;place-items:center">${svg(p[1])}</div>
+      <div class="info"><b>${p[0]}</b></div><span class="tg ${p[3]?'on':''}" onclick="this.classList.toggle('on')"></span></div>`).join('');
+
+  // notifs
+  const N=[['คิวรอนานเกิน 15 นาที','แจ้งเตือนเมื่อมีลูกค้ารอเกินกำหนด',1],['สต็อกใกล้หมด','เตือนเมื่อสินค้าต่ำกว่าจุดสั่งซื้อ',1],['คอร์สลูกค้าใกล้หมดอายุ','เตือนล่วงหน้า 7 วัน',1],['สรุปยอดขายประจำวัน','ส่งสรุปทุกสิ้นวันเวลา 22:00',1],['รีวิวใหม่จากลูกค้า','แจ้งเตือนเมื่อมีรีวิวเข้ามา',0]];
+  document.getElementById('notifs').innerHTML=N.map(n=>`
+    <div class="set-row"><div class="info"><b>${n[0]}</b><p>${n[1]}</p></div><span class="tg ${n[2]?'on':''}" onclick="this.classList.toggle('on')"></span></div>`).join('');
+
+  // section switch
+  document.querySelectorAll('#set-nav a').forEach(a=>a.onclick=()=>{
+    document.querySelectorAll('#set-nav a').forEach(x=>x.classList.remove('on'));a.classList.add('on');
+    document.querySelectorAll('.set-sec').forEach(s=>s.classList.remove('on'));
+    document.getElementById('s-'+a.dataset.s).classList.add('on');
+  });
+
+  /* ข้อความอัตโนมัติ Line OA — TODO(Backend): เซตตาม event ผ่าน Messaging API + ตัวแปร {{ชื่อ}} {{เลขคิว}} {{เวลา}} */
+  const MSGS=[
+    ['ยืนยันการจอง','ส่งทันทีเมื่อจองสำเร็จ',1,'สวัสดีค่ะคุณ {{ชื่อ}} 🌿 ยืนยันการจอง {{บริการ}} วันที่ {{วันที่}} เวลา {{เวลา}} น. เลขคิวของคุณคือ {{เลขคิว}} แล้วพบกันนะคะ'],
+    ['เตือนก่อนถึงคิว','ส่งล่วงหน้า 1 ชั่วโมง',1,'ใกล้ถึงคิวของคุณแล้วค่ะ ⏰ คิว {{เลขคิว}} เวลา {{เวลา}} น. กรุณามาถึงร้านก่อนเวลา 10 นาทีนะคะ'],
+    ['เรียกคิว','ส่งเมื่อถึงคิวของลูกค้า',1,'ถึงคิวของคุณแล้วค่ะ! คิว {{เลขคิว}} เชิญที่ {{ห้อง}} กับหมอนวด{{หมอนวด}} ได้เลยค่ะ 🙏'],
+    ['ขอบคุณหลังใช้บริการ + ขอรีวิว','ส่งหลังชำระเงิน 30 นาที',1,'ขอบคุณที่ใช้บริการ JavaXd นะคะ 🌿 หากพึงพอใจ ฝากรีวิวให้เราด้วยนะคะ → {{ลิงก์รีวิว}} รับส่วนลด 5% ครั้งถัดไป'],
+    ['อวยพรวันเกิด + โปรพิเศษ','ส่ง 09:00 น. ของวันเกิด',0,'สุขสันต์วันเกิดค่ะคุณ {{ชื่อ}} 🎂 รับส่วนลดพิเศษ 20% ทุกบริการตลอดเดือนเกิดของคุณเลยนะคะ'],
+  ];
+  window.MSGS=MSGS;
+  function renderMsgs(){
+    document.getElementById('autoMsgs').innerHTML=MSGS.map((m,i)=>`
+      <div class="set-row"><div class="ic" style="width:42px;height:42px;border-radius:12px;background:#06c75522;color:#06c755;display:grid;place-items:center;flex:0 0 42px">${svg('line')}</div>
+        <div class="info"><b>${m[0]}</b><p>${m[1]} · “${m[3].slice(0,46)}...”</p></div>
+        <button class="btn btn-ghost btn-sm" onclick="editMsg(${i})">แก้ข้อความ</button>
+        <span class="tg ${m[2]?'on':''}" onclick="this.classList.toggle('on');BS.toast('${m[0]} · '+(this.classList.contains('on')?'เปิดใช้งาน':'ปิด'))"></span></div>`).join('');
+  }
+  renderMsgs();window.renderMsgsSettings=renderMsgs;
+  window.editMsg=function(i){
+    const m=MSGS[i];
+    BS.modal({title:'แก้ข้อความ · '+m[0],sub:m[1],w:520,
+      body:`<div class="field"><label>ข้อความที่ส่ง</label><textarea id="msgTxt" rows="4" style="line-height:1.7">${m[3]}</textarea></div>
+        <div class="field"><label>ตัวแปรที่ใช้ได้ (แตะเพื่อแทรก)</label>
+        <div class="chips">${['{{ชื่อ}}','{{เลขคิว}}','{{บริการ}}','{{วันที่}}','{{เวลา}}','{{หมอนวด}}','{{ห้อง}}','{{ลิงก์รีวิว}}'].map(v=>`<span class="chip-sel" style="cursor:pointer;font-family:monospace;font-size:11.5px" onclick="document.getElementById('msgTxt').value+=' ${v}'">${v}</span>`).join('')}</div></div>
+        <div style="background:#f0fdf4;border:1px solid #c8eed6;border-radius:13px;padding:13px 15px">
+          <div style="font-size:11px;color:#0a8f4d;font-weight:700;margin-bottom:5px">ตัวอย่างที่ลูกค้าเห็น (Line)</div>
+          <div style="font-size:13px;line-height:1.7" id="msgPrev"></div></div>`,
+      foot:`<button class="btn btn-ghost" onclick="BS.closeModal()">ยกเลิก</button><button class="btn btn-pri" id="msgSave">${svg('check')} บันทึก</button>`});
+    setTimeout(()=>{
+      const t=document.getElementById('msgTxt'),p=document.getElementById('msgPrev');
+      const demo={'{{ชื่อ}}':'คุณริรินทร์','{{เลขคิว}}':'A008','{{บริการ}}':'นวดไทย 60 นาที','{{วันที่}}':'17 พ.ค.','{{เวลา}}':'10:30','{{หมอนวด}}':'อ้อม','{{ห้อง}}':'ห้อง 2','{{ลิงก์รีวิว}}':'tharin.co/r/x8'};
+      const upd=()=>{let s=t.value;Object.entries(demo).forEach(([k,v])=>{s=s.split(k).join('<b style="color:#0a8f4d">'+v+'</b>')});p.innerHTML=s};
+      t.addEventListener('input',upd);upd();
+      document.getElementById('msgSave').onclick=()=>{MSGS[i][3]=t.value;BS.closeModal();renderMsgs();BS.toast('บันทึกข้อความแล้ว')};
+    },40);
+  };
+
+  /* เพิ่มข้อความอัตโนมัติใหม่ */
+  window.addMsg=function(){
+    BS.modal({title:'เพิ่มข้อความอัตโนมัติ',sub:'สร้างการแจ้งเตือนใหม่ตามเหตุการณ์ที่ต้องการ',w:520,
+      body:`<div class="grid2"><div class="field"><label>ชื่อข้อความ</label><input id="nmTitle" placeholder="เช่น แจ้งโปรเดือนใหม่"></div>
+        <div class="field"><label>ส่งเมื่อ (เหตุการณ์)</label><select id="nmTrig"><option>จองสำเร็จ</option><option>ก่อนถึงนัด 1 ชั่วโมง</option><option>ถึงคิว / เรียกคิว</option><option>หลังชำระเงิน 30 นาที</option><option>วันเกิดลูกค้า</option><option>คอร์สใกล้หมดอายุ</option><option>ลูกค้าหายไปเกิน 30 วัน</option><option>กำหนดเอง (ตั้งเวลาส่ง)</option></select></div></div>
+        <div class="field"><label>ข้อความที่ส่ง</label><textarea id="nmTxt" rows="4" style="line-height:1.7" placeholder="พิมพ์ข้อความ... ใช้ตัวแปรด้านล่างได้"></textarea></div>
+        <div class="field"><label>ตัวแปรที่ใช้ได้ (แตะเพื่อแทรก)</label>
+        <div class="chips">${['{{ชื่อ}}','{{เลขคิว}}','{{บริการ}}','{{วันที่}}','{{เวลา}}','{{หมอนวด}}','{{ลิงก์จอง}}'].map(v=>`<span class="chip-sel" style="cursor:pointer;font-family:monospace;font-size:11.5px" onclick="document.getElementById('nmTxt').value+=' ${v}'">${v}</span>`).join('')}</div></div>`,
+      foot:`<button class="btn btn-ghost" onclick="BS.closeModal()">ยกเลิก</button><button class="btn btn-pri" id="nmSave">${svg('check')} สร้างข้อความ</button>`});
+    setTimeout(()=>{
+      document.getElementById('nmSave').onclick=()=>{
+        const t=document.getElementById('nmTitle').value.trim()||'ข้อความใหม่';
+        const tr=document.getElementById('nmTrig').value;
+        const tx=document.getElementById('nmTxt').value.trim()||'สวัสดีค่ะคุณ {{ชื่อ}}';
+        MSGS.push([t,'ส่งเมื่อ'+tr,1,tx]);
+        BS.closeModal();renderMsgs();
+        BS.toast('สร้างข้อความ “'+t+'” แล้ว · เปิดใช้งานอัตโนมัติ');
+      };
+    },40);
+  };
+
+  /* จัดการการเชื่อมต่อ Line OA
+     TODO(Backend): ดึงสถานะจริงจาก Line Messaging API (channel info, webhook, quota) */
+  window.manageLine=function(){
+    const row=(l,v,b)=>`<div class="flex ac jb" style="padding:9px 0;border-bottom:1px dashed var(--line-2)"><span style="font-size:13px;color:var(--ink-2)">${l}</span><span style="display:flex;align-items:center;gap:8px"><b style="font-weight:600;font-size:13px;font-family:${l.includes('ID')||l.includes('Webhook')?'monospace':'inherit'}">${v}</b>${b||''}</span></div>`;
+    BS.modal({title:'จัดการ Line Official Account',sub:'@javaxdspa · สถานะการเชื่อมต่อและเครื่องมือ',w:480,
+      body:row('บัญชี','@javaxdspa','<span class="badge b-green">เชื่อมต่อแล้ว</span>')
+        +row('Channel ID','200016xxxx')
+        +row('Webhook','/api/line/webhook','<span class="badge b-green">ทำงานปกติ</span>')
+        +row('Rich Menu (เมนูจองคิว)','เวอร์ชัน 3','<span class="badge b-purple">เผยแพร่แล้ว</span>')
+        +row('ผู้ติดตาม','3,842 คน')
+        +row('โควต้าข้อความเดือนนี้','12,480 / 15,000','<span class="badge b-orange">83%</span>')
+        +`<div class="flex g8" style="margin-top:14px">
+          <button class="btn btn-soft btn-sm" style="flex:1" onclick="BS.toast('ส่งข้อความทดสอบไปยัง Line ของคุณแล้ว','line')">${svg('line')} ทดสอบส่งข้อความ</button>
+          <button class="btn btn-ghost btn-sm" style="flex:1" onclick="BS.toast('ซิงก์ข้อมูลผู้ติดตามใหม่แล้ว')">ซิงก์ข้อมูล</button></div>`,
+      foot:`<button class="btn btn-ghost" style="color:var(--red);border-color:#f4ccd0;margin-right:auto" onclick="BS.closeModal();BS.toast('ยกเลิกการเชื่อมต่อ (ตัวอย่าง)','x')">ยกเลิกการเชื่อมต่อ</button>
+        <button class="btn btn-pri" onclick="BS.closeModal()">ปิด</button>`});
+  };
+};
+</script>
+<script src="../assets/api.js?v=2"></script>
+<script src="../assets/shell.js?v=8"></script>
+</body>
+</html>

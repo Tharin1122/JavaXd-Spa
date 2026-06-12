@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 21c-4.5 0-8-2.6-8-6 0 0 2.4.4 4 1.6C10.7 11.7 12 9 12 9s1.3 2.7 4 7.6c1.6-1.2 4-1.6 4-1.6 0 3.4-3.5 6-8 6Z' fill='%236c5ce7'/></svg>">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JavaXd · หน้าจอต้อนรับ</title>
+<link rel="stylesheet" href="../assets/theme.css?v=1">
+<style>
+/* ============ Front Desk — หน้าแรกของ Reception ============
+   ออกแบบเพื่องานต้อนรับโดยเฉพาะ: เห็นคิว + นัดวันนี้ + ปุ่มลัดใหญ่ ใน 1 จอ
+   ไม่มีการเงินรวม / กำไร / รายงาน (ตามสิทธิ์ Reception)
+   ── API ที่ใช้ ──
+   GET  /dashboard                     → ตัวเลขคิว (waiting/inService/completed) + นัด
+   GET  /walk-in                       → รายการคิววันนี้ (waiting + in-service)
+   GET  /booking?date={today}          → นัดหมายวันนี้ (ยังไม่เช็คอิน)
+   PATCH /walk-in/{id}/assign {therapistId} + /start   → เรียกคิว/เริ่มบริการ
+   PATCH /walk-in/{id}/cancel {reason}                 → ยกเลิกคิว
+   POST /walk-in {customerId,items[]}  → เช็คอินจากนัด (กดที่การ์ดนัด)
+   SignalR: QueueUpdated / BookingUpdated → โหลดบอร์ดใหม่อัตโนมัติ */
+.fd-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+@media(max-width:900px){.fd-actions{grid-template-columns:repeat(2,1fr)}}
+.fd-act{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;cursor:pointer;transition:.15s;box-shadow:var(--shadow);text-decoration:none;color:var(--ink)}
+.fd-act:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg);border-color:var(--brand-soft)}
+.fd-act .ic{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;flex:0 0 48px}
+.fd-act .ic svg{width:24px;height:24px}
+.fd-act b{font-size:14.5px;font-weight:700;display:block}
+.fd-act span{font-size:12px;color:var(--ink-3)}
+.fd-act.pri{background:var(--brand-grad);border:none;color:#fff;box-shadow:0 10px 24px rgba(108,92,231,.35)}
+.fd-act.pri .ic{background:rgba(255,255,255,.18);color:#fff}
+.fd-act.pri span{color:#d9d4ff}
+.fd-board{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;align-items:start}
+@media(max-width:1100px){.fd-board{grid-template-columns:1fr}}
+.fd-col{background:var(--card-2);border:1px solid var(--line);border-radius:16px;padding:14px}
+.fd-col-h{display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:700;padding:2px 4px 12px}
+.fd-col-h .cnt{margin-left:auto;background:#fff;border:1px solid var(--line);color:var(--ink-2);font-size:12px;font-weight:700;padding:2px 10px;border-radius:20px}
+.fd-card{background:#fff;border:1px solid var(--line);border-radius:13px;padding:13px;margin-bottom:10px;cursor:pointer;transition:.13s;box-shadow:var(--shadow)}
+.fd-card:hover{border-color:var(--brand);transform:translateY(-1px)}
+.fd-card .top{display:flex;align-items:center;gap:10px}
+.fd-card .nm{font-weight:600;font-size:13.5px}
+.fd-card .sv{font-size:12px;color:var(--ink-3);margin-top:1px}
+.fd-card .meta{display:flex;align-items:center;justify-content:space-between;margin-top:9px;padding-top:9px;border-top:1px dashed var(--line-2);font-size:12px;color:var(--ink-2)}
+.fd-empty{text-align:center;color:var(--ink-3);font-size:12.5px;padding:22px 6px}
+</style>
+</head>
+<body data-title="หน้าจอต้อนรับ (Front Desk)">
+
+<template id="page">
+  <!-- ปุ่มลัดงานหลักของรีเซป -->
+  <div class="fd-actions">
+    <a class="fd-act pri" onclick="BS.openBooking({type:'walkin'})"><span class="ic" data-i="flow"></span><div><b>รับ Walk-in</b><span>ลูกค้าหน้าร้าน เข้าคิวเลย</span></div></a>
+    <a class="fd-act" onclick="BS.openBooking()"><span class="ic" style="background:var(--brand-soft);color:var(--brand)" data-i="cal"></span><div><b>สร้างการจอง</b><span>นัดล่วงหน้า / โทรจอง</span></div></a>
+    <a class="fd-act" href="pos.html"><span class="ic" style="background:var(--green-soft);color:#178a61" data-i="receipt"></span><div><b>รับชำระเงิน</b><span>ออกบิล / ใบเสร็จ</span></div></a>
+    <a class="fd-act" href="queue-display.html" target="_blank"><span class="ic" style="background:var(--blue-soft);color:#2477cc" data-i="screen"></span><div><b>จอเรียกคิว (TV)</b><span>เปิดบนจอหน้าร้าน</span></div></a>
+  </div>
+
+  <!-- ตัวเลขวันนี้ -->
+  <div class="stat-grid" style="margin-bottom:22px">
+    <div class="stat"><div class="row1"><div class="ic ic-orange" data-i="clock"></div><span class="tt">รอคิว</span></div><div class="val" id="stWait">—</div><div class="row3"><span class="from">คนที่รอเรียก</span></div></div>
+    <div class="stat"><div class="row1"><div class="ic ic-blue" data-i="flow"></div><span class="tt">กำลังให้บริการ</span></div><div class="val" id="stServe">—</div><div class="row3"><span class="from">อยู่ในห้องนวด</span></div></div>
+    <div class="stat"><div class="row1"><div class="ic ic-green" data-i="check"></div><span class="tt">เสร็จสิ้นวันนี้</span></div><div class="val" id="stDone">—</div><div class="row3"><span class="from">พร้อมเก็บเงิน/กลับแล้ว</span></div></div>
+    <div class="stat"><div class="row1"><div class="ic ic-purple" data-i="cal"></div><span class="tt">นัดที่เหลือวันนี้</span></div><div class="val" id="stBook">—</div><div class="row3"><span class="from">ยังไม่เช็คอิน</span></div></div>
+  </div>
+
+  <!-- บอร์ดคิว 3 คอลัมน์ -->
+  <div class="fd-board">
+    <div class="fd-col"><div class="fd-col-h"><span class="d" style="width:9px;height:9px;border-radius:50%;background:#f5a623"></span>คิวรอเรียก<span class="cnt" id="cWait">0</span></div><div id="colWait"></div></div>
+    <div class="fd-col"><div class="fd-col-h"><span class="d" style="width:9px;height:9px;border-radius:50%;background:#3b9bff"></span>กำลังให้บริการ<span class="cnt" id="cServe">0</span></div><div id="colServe"></div></div>
+    <div class="fd-col"><div class="fd-col-h"><span class="d" style="width:9px;height:9px;border-radius:50%;background:#8b5cf6"></span>นัดวันนี้ (ยังไม่มา)<span class="cnt" id="cBook">0</span></div><div id="colBook"></div></div>
+  </div>
+</template>
+
+<script>window.BASE='../';window.PAGE='frontdesk';</script>
+<script>if(!localStorage.getItem('th_auth'))location.href='../login.html';</script>
+<script>
+window.PAGE_INIT=function(){
+  document.querySelectorAll('[data-i]').forEach(e=>{const t=e.textContent.trim();e.innerHTML=svg(e.dataset.i)+(t?'<span>'+t+'</span>':'')});
+
+  const todayIso=(d=>new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10))(new Date());
+  const esc=s=>String(s||'').replace(/"/g,'&quot;');
+
+  /* ---------- โหลดบอร์ด ---------- */
+  window.FD={wait:[],serve:[],book:[]};
+  async function loadBoard(){
+    /* 1) ตัวเลขสรุปจาก /dashboard */
+    try{
+      const d=await API.get('/dashboard');const q=d.queue||{};
+      setTxt('stWait',q.waiting);setTxt('stServe',q.inService);setTxt('stDone',q.completed);
+    }catch(e){}
+    /* 2) คิววันนี้จาก /walk-in (โครงสร้างเดียวกับที่แดชบอร์ดใช้) */
+    let wi=[];try{const r=await API.get('/walk-in');wi=(r&&r.items)||r||[];}catch(e){}
+    if(!Array.isArray(wi))wi=[];
+    const st=x=>x.status!=null?x.status:x.state; // กันชื่อ field ต่าง
+    window.FD.wait=wi.filter(x=>st(x)===0||st(x)==='Waiting');
+    window.FD.serve=wi.filter(x=>st(x)===1||st(x)==='InService');
+    /* 3) นัดวันนี้ที่ยังไม่เช็คอิน */
+    let bk=[];try{const r=await API.get('/booking?date='+todayIso);bk=(r&&r.items)||r||[];}catch(e){}
+    if(!Array.isArray(bk))bk=[];
+    window.FD.book=bk.filter(b=>!b.checkedIn&&b.status!==2&&b.status!=='Cancelled');
+    render();
+    // การ์ดคลิกดูรายละเอียดได้ (reuse modal เดียวกับหน้าอื่น)
+    const nameOf=x=>(x.customer&&x.customer.displayName)||x.customerName||'ลูกค้า';
+    const done=wi.filter(x=>st(x)===2);
+    BS.statDetails([
+      {title:'รอคิว · '+FD.wait.length+' คน',sub:'เรียงตามเวลามาถึง',rows:FD.wait.length?FD.wait.map(x=>[(x.queueNumber||'')+' '+nameOf(x),API.fmtTime(x.arrivalTime)||'']):[['ไม่มีคิวรอ','—']]},
+      {title:'กำลังให้บริการ · '+FD.serve.length+' คน',sub:'อยู่ในห้องนวดตอนนี้',rows:FD.serve.length?FD.serve.map(x=>[(x.queueNumber||'')+' '+nameOf(x),'เริ่ม '+(API.fmtTime(x.startTime)||'-')]):[['ไม่มีใครอยู่บนเตียง','—']]},
+      {title:'เสร็จสิ้นวันนี้ · '+done.length+' คิว',sub:'จ่ายแล้ว/รอเก็บเงิน',rows:done.length?done.map(x=>[(x.queueNumber||'')+' '+nameOf(x),x.paid?'✓ ชำระแล้ว':'⚠ รอชำระ',x.paid?'#178a61':'#b9791a']):[['ยังไม่มีคิวที่จบ','—']]},
+      {title:'นัดที่เหลือวันนี้ · '+FD.book.length,sub:'ยังไม่เช็คอิน',rows:FD.book.length?FD.book.map(b=>[(b.bookingNo||'')+' '+nameOf(b),(b.startTime||'').slice(0,5)+' น.']):[['ไม่มีนัดค้าง','—']]},
+    ]);
+  }
+  function setTxt(id,v){const e=document.getElementById(id);if(e)e.innerHTML=(v!=null?v:'—')+' <small>คน</small>'}
+
+  function card(x,kind){
+    const nm=(x.customer&&x.customer.displayName)||x.customerName||x.cust||'ลูกค้า';
+    const svcs=(x.items||[]).map(it=>(it.service&&it.service.name)||it.serviceName).filter(Boolean).join(', ')||x.svc||'-';
+    const th=(x.items&&x.items[0]&&x.items[0].therapist&&x.items[0].therapist.displayName)||x.th||'';
+    const time=x.arrivalTime?API.fmtTime(x.arrivalTime):(x.startTime||'').slice(0,5);
+    const qno=x.queueNumber||x.qno||'';
+    // คิวรอ: บอกชัดว่าเรียกได้เลย หรือใครใกล้ว่าง (ข้อมูลจาก backend ตัวเดียวกับหน้าการจอง)
+    let hint='';const a=x.assign;
+    if(kind==='wait'&&a){
+      if(a.callable)hint=`<div style="margin-top:7px"><span class="badge b-green">▶ เรียกคิวได้เลย · ${a.suggested.displayName} ว่าง</span></div>`;
+      else if(a.nextFree)hint=`<div style="margin-top:7px"><span class="badge b-orange">รอ ${a.nextFree.displayName} ว่าง ~${a.nextFree.freeAt} น.</span></div>`;
+    }
+    const stBadge=x.stateLabel?`<span class="badge ${x.paid?'b-green':kind==='serve'?'b-purple':'b-gray'}" style="margin-left:6px;font-size:10.5px">${x.stateLabel}</span>`:'';
+    return `<div class="fd-card" ${kind==='wait'&&a&&a.callable?'style="border-color:#22b07d;background:#f2fbf7"':''} onclick="fdDetail('${esc(x.id)}','${kind}')">
+      <div class="top">${av(nm,36)}<div style="flex:1"><div class="nm">${nm}${stBadge}</div><div class="sv">${svcs}</div></div>${qno?`<span class="badge b-purple">${qno}</span>`:''}</div>
+      <div class="meta"><span>${kind==='book'?'นัด ':''}${time||'-'} น.</span><span>${th?'หมอนวด'+th:(kind==='wait'?'รอจัดหมอนวด':'')}</span></div>${hint}
+    </div>`;
+  }
+  function render(){
+    const f=window.FD;
+    document.getElementById('cWait').textContent=f.wait.length;
+    document.getElementById('cServe').textContent=f.serve.length;
+    document.getElementById('cBook').textContent=f.book.length;
+    document.getElementById('stBook').innerHTML=f.book.length+' <small>นัด</small>';
+    document.getElementById('colWait').innerHTML=f.wait.length?f.wait.map(x=>card(x,'wait')).join(''):'<div class="fd-empty">ไม่มีคิวรอ 🎉<br>กด "รับ Walk-in" เมื่อลูกค้ามาถึง</div>';
+    document.getElementById('colServe').innerHTML=f.serve.length?f.serve.map(x=>card(x,'serve')).join(''):'<div class="fd-empty">ยังไม่มีงานที่กำลังให้บริการ</div>';
+    document.getElementById('colBook').innerHTML=f.book.length?f.book.map(x=>card(x,'book')).join(''):'<div class="fd-empty">ไม่มีนัดค้างของวันนี้</div>';
+  }
+
+  /* ---------- คลิกการ์ด → จัดการในหน้านี้ ---------- */
+  window.fdDetail=async function(id,kind){
+    if(kind==='book'){
+      const b=window.FD.book.find(x=>String(x.id)===String(id));if(!b)return;
+      const nm=(b.customer&&b.customer.displayName)||b.customerName||'ลูกค้า';
+      BS.modal({title:'นัดหมาย · '+nm,sub:'ลูกค้ามาถึงแล้ว? กดเช็คอินเพื่อส่งเข้าคิว',w:430,
+        body:`<div class="flex ac g12" style="margin-bottom:12px">${av(nm,44)}<div><div style="font-weight:700">${nm}</div><div class="sub" style="font-size:12.5px">${(b.items||[]).map(it=>(it.service&&it.service.name)||'').join(', ')||'-'} · ${(b.startTime||'').slice(0,5)} น.</div></div></div>`,
+        foot:`<button class="btn btn-ghost" onclick="BS.closeModal()">ปิด</button>
+          <button class="btn btn-pri" onclick="fdCheckin('${esc(id)}')">${svg('check')} เช็คอิน → เข้าคิว</button>`});
+      return;
+    }
+    /* คิว (wait/serve) — ใช้โฟลว์เดียวกับแดชบอร์ด: โหลดรายละเอียด + หมอนวดที่ว่าง */
+    BS.modal({title:'คิว',sub:'กำลังโหลด...',w:440,body:'<div style="padding:20px;text-align:center;color:var(--ink-3)">กำลังโหลด...</div>'});
+    let w;try{w=await API.get('/walk-in/'+id);}catch(e){BS.toast('โหลดคิวไม่สำเร็จ','x');BS.closeModal();return;}
+    const nm=(w.customer&&w.customer.displayName)||'ลูกค้า';
+    const svcNames=(w.items||[]).map(it=>it.service&&it.service.name).filter(Boolean).join(', ');
+    if(kind==='serve'){
+      BS.modal({title:'กำลังให้บริการ · '+nm,sub:svcNames,w:420,
+        body:`<div class="flex ac g12">${av(nm,44)}<div><div style="font-weight:700">${nm}</div><div class="sub" style="font-size:12.5px">เริ่ม ${API.fmtTime(w.serviceStartTime||w.startTime)||'-'} น.</div></div></div>`,
+        foot:`<button class="btn btn-ghost" onclick="BS.closeModal()">ปิด</button>
+          <a class="btn btn-pri" href="pos.html?walkin=${w.id}" style="text-decoration:none">${svg('wallet')} จบงาน & รับชำระ</a>`});
+      return;
+    }
+    const serviceIds=[...new Set((w.items||[]).map(it=>it.service&&it.service.id).filter(Boolean))];
+    let avail=[];
+    try{const qs=serviceIds.map(s=>'serviceIds='+s).join('&');const map=await API.get('/walk-in/available-therapists?'+qs);
+      const lists=serviceIds.map(s=>(map[s]||[]));if(lists.length)avail=lists[0].filter(t=>lists.every(l=>l.some(x=>x.id===t.id)));}catch(e){}
+    BS.modal({title:'เรียกคิว · '+nm,sub:svcNames||'-',w:440,
+      body:`<div class="flex ac g12" style="margin-bottom:14px">${av(nm,44)}<div><div style="font-weight:700">${nm}</div><div class="sub" style="font-size:12.5px">มาถึง ${API.fmtTime(w.arrivalTime)||'-'} น.</div></div></div>
+        <div class="field"><label>มอบหมายหมอนวด</label>
+        <select id="fdTh">${avail.length?avail.map(t=>`<option value="${t.id}">${t.displayName}</option>`).join(''):'<option value="">— ไม่มีหมอนวดว่างตอนนี้ —</option>'}</select></div>`,
+      foot:`<button class="btn btn-ghost" style="color:var(--red);border-color:#f4ccd0;margin-right:auto" onclick="fdCancel('${esc(id)}')">ยกเลิกคิว</button>
+        <button class="btn btn-ghost" onclick="BS.closeModal()">ปิด</button>
+        <button class="btn btn-pri" onclick="fdCall('${esc(id)}')">${svg('check')} เรียกคิว / เริ่มบริการ</button>`});
+  };
+  window.fdCall=async function(id){
+    const sel=document.getElementById('fdTh');const tid=sel&&sel.value;
+    if(!tid){BS.toast('ไม่มีหมอนวดที่ว่างสำหรับบริการนี้','x');return;}
+    try{await API.patch('/walk-in/'+id+'/assign',{therapistId:tid,roomId:null});await API.patch('/walk-in/'+id+'/start');
+      BS.closeModal();BS.toast('เรียกคิวแล้ว · เริ่มให้บริการ');loadBoard();
+    }catch(e){BS.toast('ไม่สำเร็จ: '+e.message,'x');}
+  };
+  window.fdCancel=async function(id){
+    try{await API.patch('/walk-in/'+id+'/cancel',{reason:'ยกเลิกที่หน้าต้อนรับ'});BS.closeModal();BS.toast('ยกเลิกคิวแล้ว','x');loadBoard();}
+    catch(e){BS.toast('ไม่สำเร็จ: '+e.message,'x');}
+  };
+  window.fdCheckin=async function(id){
+    const b=window.FD.book.find(x=>String(x.id)===String(id));if(!b){BS.closeModal();return;}
+    try{
+      const customerId=(b.customer&&b.customer.id)||b.customerId;
+      await API.post('/walk-in',{customerId,bookingId:b.id,items:(b.items||[]).map((it,i)=>({serviceId:(it.service&&it.service.id)||it.serviceId,therapistId:(it.therapist&&it.therapist.id)||it.therapistId||null,roomId:null,sortOrder:i})),notes:'เช็คอินจากนัดหมาย'});
+      BS.closeModal();BS.toast('เช็คอิน '+((b.customer&&b.customer.displayName)||'ลูกค้า')+' เข้าคิวแล้ว','flow');loadBoard();
+    }catch(e){BS.toast('เช็คอินไม่สำเร็จ: '+e.message,'x');}
+  };
+
+  loadBoard();
+  /* เรียลไทม์: คิว/นัดเปลี่ยนจากเครื่องอื่น → โหลดบอร์ดใหม่ */
+  if(window.RT)RT.onUpdate(function(){clearTimeout(window._fdRt);window._fdRt=setTimeout(loadBoard,600);});
+  setInterval(loadBoard,60000); // สำรองกรณี SignalR หลุด
+};
+</script>
+<script src="../assets/api.js?v=2"></script>
+<script src="../assets/shell.js?v=8"></script>
+</body>
+</html>

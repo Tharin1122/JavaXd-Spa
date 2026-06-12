@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 21c-4.5 0-8-2.6-8-6 0 0 2.4.4 4 1.6C10.7 11.7 12 9 12 9s1.3 2.7 4 7.6c1.6-1.2 4-1.6 4-1.6 0 3.4-3.5 6-8 6Z' fill='%236c5ce7'/></svg>">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JavaXd · สต็อกสินค้า</title>
+<link rel="stylesheet" href="../assets/theme.css?v=1">
+<style>
+.lvl{width:120px}
+.lvl .bar{height:7px;border-radius:7px;background:#edeff6;overflow:hidden}
+.lvl .bar>i{display:block;height:100%;border-radius:7px}
+.lvl .t{font-size:11px;color:var(--ink-3);margin-top:4px}
+.alert{display:flex;gap:13px;padding:14px;border-radius:13px;background:var(--red-soft);border:1px solid #f8d2d6;margin-bottom:10px}
+.alert.warn{background:var(--orange-soft);border-color:#f6e3bf}
+.alert .ai{width:36px;height:36px;border-radius:10px;background:#fff;display:grid;place-items:center;flex:0 0 36px}
+</style>
+</head>
+<body data-title="สต็อกสินค้า">
+
+<template id="page">
+  <div class="page-h">
+    <div class="ttl"><h2>สต็อกสินค้า</h2><p>จัดการคลังน้ำมันนวด สมุนไพร และของใช้สิ้นเปลือง</p></div>
+    <div class="sp">
+      <button class="btn btn-ghost" onclick="issueStock()" data-i="down">เบิกของ</button>
+      <button class="btn btn-pri" onclick="receiveStock()" data-i="plus">รับเข้า</button>
+    </div>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat"><div class="row1"><div class="ic ic-purple" data-i="box"></div><span class="tt">รายการทั้งหมด</span></div><div class="val">68 <small>SKU</small></div><div class="row3"><span class="from">4 หมวดหมู่</span></div></div>
+    <div class="stat"><div class="row1"><div class="ic ic-green" data-i="money"></div><span class="tt">มูลค่าสต็อก</span></div><div class="val">142,800 <small>฿</small></div><div class="row3"><span class="from">ราคาทุนรวม</span></div></div>
+    <div class="stat"><div class="row1"><div class="ic ic-orange" data-i="box"></div><span class="tt">ใกล้หมด</span></div><div class="val">7 <small>รายการ</small></div><div class="row3"><span class="from">ต่ำกว่าจุดสั่งซื้อ</span></div></div>
+    <div class="stat"><div class="row1"><div class="ic ic-blue" data-i="down"></div><span class="tt">เบิกใช้เดือนนี้</span></div><div class="val">18,400 <small>฿</small></div><div class="row3"><span class="from">ของใช้สิ้นเปลือง</span></div></div>
+  </div>
+
+  <div class="grid-2 mb24" style="grid-template-columns:1fr 1fr">
+    <div class="alert"><div class="ai" style="color:var(--red)"><span data-i="box"></span></div><div><b>สต็อกหมด · ต้องสั่งด่วน</b><div class="sub" style="font-size:12.5px">น้ำมันนวดอโรมา ลาเวนเดอร์ · เหลือ 2 ขวด (จุดสั่งซื้อ 10)</div></div><button class="btn btn-sm btn-soft mla" style="align-self:center" onclick="purchaseOrder('น้ำมันนวดอโรมา ลาเวนเดอร์')">สั่งซื้อ</button></div>
+    <div class="alert warn"><div class="ai" style="color:var(--orange)"><span data-i="box"></span></div><div><b>ใกล้ถึงจุดสั่งซื้อ</b><div class="sub" style="font-size:12.5px">ลูกประคบสมุนไพร · เหลือ 14 ลูก (จุดสั่งซื้อ 20)</div></div><button class="btn btn-sm btn-ghost mla" style="align-self:center" onclick="purchaseOrder('ลูกประคบสมุนไพร')">สั่งซื้อ</button></div>
+  </div>
+
+  <div class="card card-pad">
+    <div class="flex ac g12 wrap" style="margin-bottom:16px">
+      <div class="search" style="max-width:280px;flex:0 0 280px"><input placeholder="ค้นหาสินค้า"></div>
+      <div class="seg"><button class="on">ทั้งหมด</button><button>น้ำมัน</button><button>สมุนไพร</button><button>ของใช้</button></div>
+      <span class="mla muted" style="font-size:13px">68 รายการ</span>
+    </div>
+    <table class="tbl" id="inv-tbl"></table>
+  </div>
+</template>
+
+<script>window.BASE='../';window.PAGE='inventory';</script>
+<script>if(!localStorage.getItem('th_auth'))location.href=(window.BASE||'')+'login.html';</script>
+<script>
+window.PAGE_INIT=function(){
+  document.querySelectorAll('[data-i]').forEach(e=>{const t=e.textContent.trim();e.innerHTML=svg(e.dataset.i)+(t?'<span>'+t+'</span>':'')});
+  document.querySelectorAll('.alert [data-i]').forEach(e=>e.innerHTML=svg(e.dataset.i));
+  let ALL=[]; let FILT='ทั้งหมด'; let Q=''; let STATS={monthlyOutQty:0,monthlyOutValue:0};
+
+  function render(){
+    let list=ALL.slice();
+    if(FILT!=='ทั้งหมด')list=list.filter(x=>x.category===FILT);
+    if(Q){const q=Q.toLowerCase();list=list.filter(x=>(x.name||'').toLowerCase().includes(q)||(x.sku||'').toLowerCase().includes(q));}
+    const cnt=document.querySelector('.mla.muted');if(cnt)cnt.textContent=list.length+' รายการ';
+    // stat cards (ตรงตามต้นฉบับ: ทั้งหมด / มูลค่า / ใกล้หมด / เบิกใช้เดือนนี้)
+    const cats=[...new Set(ALL.map(x=>x.category).filter(Boolean))];
+    const v=document.querySelectorAll('.stat-grid .val');
+    if(v[0])v[0].innerHTML=ALL.length+' <small>รายการ</small>';
+    if(v[1])v[1].innerHTML=fmt(ALL.reduce((s,x)=>s+x.costPerUnit*x.quantity,0))+' <small>฿</small>';
+    if(v[2])v[2].innerHTML=ALL.filter(x=>x.quantity<=x.reorderPoint).length+' <small>รายการ</small>';
+    if(v[3])v[3].innerHTML=fmt(STATS.monthlyOutValue)+' <small>฿</small>';
+    const fr=document.querySelectorAll('.stat-grid .from');
+    if(fr[0])fr[0].textContent=cats.length+' หมวดหมู่';
+    if(fr[3])fr[3].textContent='เบิกออก '+STATS.monthlyOutQty+' หน่วย';
+    wireStatDetails();
+    // alerts (low stock)
+    const low=ALL.filter(x=>x.quantity<=x.reorderPoint).slice(0,2);
+    document.querySelectorAll('.grid-2 .alert').forEach((a,i)=>{const x=low[i];
+      if(x){a.style.display='';const sub=a.querySelector('.sub');if(sub)sub.textContent=x.name+' · เหลือ '+x.quantity+' '+x.unit+' (จุดสั่งซื้อ '+x.reorderPoint+')';const btn=a.querySelector('button');if(btn)btn.setAttribute('onclick',`receiveStock('${x.id}')`);}
+      else a.style.display='none';});
+    // table
+    document.getElementById('inv-tbl').innerHTML=
+      '<thead><tr><th>สินค้า</th><th>หมวดหมู่</th><th>คงเหลือ</th><th>ระดับสต็อก</th><th style="text-align:right">ทุน/หน่วย</th><th style="text-align:right">มูลค่า</th><th></th></tr></thead><tbody>'+
+      (list.length?list.map(x=>{const ratio=Math.min(x.quantity/((x.reorderPoint||1)*2),1),low=x.quantity<=x.reorderPoint;const col=low?'#ef5d6b':ratio<0.6?'#f5a623':'#22b07d';
+        return `<tr>
+          <td><div class="cell-u"><span class="av sq" style="width:34px;height:34px;background:var(--brand-soft);color:var(--brand)">${svg('box')}</span><div><div class="nm">${x.name}</div><div class="sub">${x.sku||''}</div></div></div></td>
+          <td><span class="badge b-gray">${x.category||'-'}</span></td>
+          <td><b style="font-weight:600;color:${low?'#ef5d6b':'inherit'}">${x.quantity}</b> ${x.unit}${low?' <span class="badge b-red" style="margin-left:4px">ต่ำ</span>':''}</td>
+          <td><div class="lvl"><div class="bar"><i style="width:${ratio*100}%;background:${col}"></i></div><div class="t">จุดสั่งซื้อ ${x.reorderPoint} ${x.unit}</div></div></td>
+          <td style="text-align:right">${fmt(x.costPerUnit)} ฿</td>
+          <td style="text-align:right;font-weight:600">${fmt(x.quantity*x.costPerUnit)} ฿</td>
+          <td><div class="row-act"><button data-i="plus" title="รับเข้า" onclick="receiveStock('${x.id}')"></button><button data-i="edit" title="แก้ไข" onclick="editItem('${x.id}')"></button></div></td>
+        </tr>`}).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--ink-3);padding:30px">ยังไม่มีสินค้า — กด "รับเข้า" เพื่อเพิ่มสินค้าใหม่</td></tr>')+'</tbody>';
+    document.querySelectorAll('#inv-tbl [data-i]').forEach(e=>e.innerHTML=svg(e.dataset.i));
+  }
+  window.invRender=render;
+
+  // การ์ดสถิติคลิกดูรายละเอียดได้ (แยกยอดตามหมวด — ข้อมูลจริงจาก ALL)
+  function wireStatDetails(){
+    document.querySelectorAll('.stat-grid .stat').forEach(el=>el.onclick=null); // refresh ด้วยข้อมูลล่าสุด
+    const byCat=c=>ALL.filter(x=>x.category===c);
+    const cats=[...new Set(ALL.map(x=>x.category).filter(Boolean))];
+    const low=ALL.filter(x=>x.quantity<=x.reorderPoint).sort((a,b)=>a.quantity-b.quantity);
+    BS.statDetails([
+      {title:'รายการทั้งหมด · '+ALL.length+' รายการ',sub:'แยกตามหมวดหมู่',rows:cats.map(c=>[c,byCat(c).length+' รายการ'])},
+      {title:'มูลค่าสต็อก · '+fmt(ALL.reduce((s,x)=>s+x.costPerUnit*x.quantity,0))+' ฿',sub:'มูลค่าทุนคงเหลือแยกตามหมวด',rows:cats.map(c=>[c,fmt(byCat(c).reduce((s,x)=>s+x.costPerUnit*x.quantity,0))+' ฿'])},
+      {title:'ใกล้หมด · '+low.length+' รายการ',sub:'ต่ำกว่าหรือเท่าจุดสั่งซื้อ',rows:(low.length?low.slice(0,8).map(x=>[x.name,'เหลือ '+x.quantity+' '+x.unit,x.quantity===0?'var(--red)':'#b9791a']):[['ไม่มีสินค้าใกล้หมด','—']]),foot:low.length?`<button class="btn btn-ghost" onclick="BS.closeModal()">ปิด</button><button class="btn btn-pri" onclick="BS.closeModal();purchaseOrder('${(low[0].name||'').replace(/'/g,'')}')">สั่งซื้อด่วน</button>`:undefined},
+      {title:'เบิกใช้เดือนนี้ · '+fmt(STATS.monthlyOutValue)+' ฿',sub:'มูลค่าของที่เบิกออกในเดือนปัจจุบัน (จาก DB จริง)',rows:[['จำนวนเบิกออก',STATS.monthlyOutQty+' หน่วย'],['มูลค่ารวม',fmt(STATS.monthlyOutValue)+' ฿','var(--brand-700)']]},
+    ]);
+  }
+
+  async function load(){try{
+    const [r,st]=await Promise.all([API.get('/inventory'),API.get('/inventory/stats').catch(()=>null)]);
+    ALL=(r&&r.items)||[];if(st)STATS=st;render();
+  }catch(e){console.error('inventory',e);}}
+  load();
+  const si=document.querySelector('.search input');if(si)si.addEventListener('input',e=>{Q=e.target.value;render();});
+  document.querySelectorAll('.seg button').forEach((b,i)=>b.onclick=()=>{document.querySelectorAll('.seg button').forEach(x=>x.classList.remove('on'));b.classList.add('on');FILT=['ทั้งหมด','น้ำมัน','สมุนไพร','ของใช้'][i];render();});
+
+  function itemForm(x){x=x||{};return `<div class="grid2"><div class="field"><label>ชื่อสินค้า</label><input id="iName" value="${(x.name||'').replace(/"/g,'&quot;')}"></div>
+      <div class="field"><label>รหัส (SKU)</label><input id="iSku" value="${x.sku||''}"></div></div>
+    <div class="grid2"><div class="field"><label>หมวดหมู่</label><select id="iCat"><option ${x.category==='น้ำมัน'?'selected':''}>น้ำมัน</option><option ${x.category==='สมุนไพร'?'selected':''}>สมุนไพร</option><option ${x.category==='ของใช้'?'selected':''}>ของใช้</option></select></div>
+      <div class="field"><label>หน่วย</label><input id="iUnit" value="${x.unit||'ขวด'}"></div></div>
+    <div class="grid2"><div class="field"><label>ราคาทุน/หน่วย (บาท)</label><input id="iCost" type="number" value="${x.costPerUnit||''}"></div>
+      <div class="field"><label>จุดสั่งซื้อ (แจ้งเตือนเมื่อต่ำกว่า)</label><input id="iReorder" type="number" value="${x.reorderPoint||0}"></div></div>`;}
+  function readItem(){return {name:document.getElementById('iName').value.trim(),sku:document.getElementById('iSku').value.trim()||null,category:document.getElementById('iCat').value,unit:document.getElementById('iUnit').value.trim()||'ชิ้น',costPerUnit:parseFloat(document.getElementById('iCost').value)||0,reorderPoint:parseInt(document.getElementById('iReorder').value)||0};}
+
+  window.addItem=function(){BS.modal({title:'เพิ่มสินค้าใหม่',sub:'เพิ่มรายการเข้าคลัง',w:520,body:itemForm()+'<div class="field"><label>จำนวนเริ่มต้น</label><input id="iQty" type="number" value="0"></div>',
+    foot:`<button class="btn btn-ghost" onclick="BS.closeModal()">ยกเลิก</button><button class="btn btn-pri" onclick="window._saveNew()">${svg('check')} บันทึก</button>`});
+    window._saveNew=async()=>{const b=readItem();if(!b.name){BS.toast('กรอกชื่อสินค้า','x');return;}b.quantity=parseInt(document.getElementById('iQty').value)||0;try{await API.post('/inventory',b);BS.closeModal();BS.toast('เพิ่มสินค้าแล้ว');await load();}catch(e){BS.toast('ไม่สำเร็จ: '+e.message,'x');}};};
+  window.editItem=function(id){const x=ALL.find(i=>i.id===id);if(!x)return;BS.modal({title:'แก้ไขสินค้า · '+x.name,w:520,body:itemForm(x),
+    foot:`<button class="btn btn-ghost" style="color:var(--red);border-color:#f4ccd0;margin-right:auto" onclick="window._delItem('${id}')">${svg('trash')} ลบ</button><button class="btn btn-ghost" onclick="BS.closeModal()">ยกเลิก</button><button class="btn btn-pri" onclick="window._saveEdit('${id}')">${svg('check')} บันทึก</button>`});
+    window._saveEdit=async(iid)=>{const b=readItem();try{await API.put('/inventory/'+iid,Object.assign({quantity:x.quantity},b));BS.closeModal();BS.toast('บันทึกแล้ว');await load();}catch(e){BS.toast('ไม่สำเร็จ','x');}};
+    window._delItem=async(iid)=>{try{await API.del('/inventory/'+iid);BS.closeModal();BS.toast('ลบสินค้าแล้ว');await load();}catch(e){BS.toast('ลบไม่สำเร็จ','x');}};};
+
+  const today=()=>(d=>new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10))(new Date());
+  function moveModal(title,type,id){const opts=ALL.map(x=>`<option value="${x.id}" ${x.id===id?'selected':''}>${x.name} (คงเหลือ ${x.quantity} ${x.unit})</option>`).join('');
+    if(!ALL.length){BS.modal({title,w:420,body:'<div style="padding:8px 0;color:var(--ink-3)">ยังไม่มีสินค้า เพิ่มสินค้าใหม่ก่อน</div>',foot:`<button class="btn btn-ghost" onclick="BS.closeModal()">ยกเลิก</button><button class="btn btn-pri" onclick="BS.closeModal();addItem()">${svg('plus')} เพิ่มสินค้าใหม่</button>`});return;}
+    const inForm=`<div class="field"><label>สินค้า</label><select id="mvItem">${opts}</select></div>
+        <div class="grid2"><div class="field"><label>จำนวนรับเข้า</label><input id="mvQty" type="number" placeholder="เช่น 24"></div>
+          <div class="field"><label>ราคาทุน/หน่วย (บาท)</label><input id="mvCost" type="number" placeholder="อัปเดตทุน (ถ้ามี)"></div></div>
+        <div class="grid2"><div class="field"><label>ผู้จำหน่าย</label><input id="mvSup" placeholder="ชื่อร้าน / ซัพพลายเออร์"></div>
+          <div class="field"><label>วันที่รับ</label><input id="mvDate" type="date" value="${today()}"></div></div>`;
+    const outForm=`<div class="field"><label>สินค้า</label><select id="mvItem">${opts}</select></div>
+        <div class="grid2"><div class="field"><label>จำนวนเบิก</label><input id="mvQty" type="number" placeholder="จำนวน"></div>
+          <div class="field"><label>ผู้เบิก</label><input id="mvWho" placeholder="ชื่อผู้เบิก"></div></div>
+        <div class="field"><label>เหตุผล</label><div class="seg-full" id="mvReason"><button class="on" data-r="ใช้ในบริการ">ใช้ในบริการ</button><button data-r="ชำรุด/หมดอายุ">ชำรุด/หมดอายุ</button><button data-r="อื่นๆ">อื่นๆ</button></div></div>
+        <div class="field"><label>หมายเหตุ</label><input id="mvNote" placeholder="รายละเอียดเพิ่มเติม"></div>`;
+    BS.modal({title,sub:type==='in'?'รับของเข้าคลัง':'นำของไปใช้/ตัดออก',w:480,
+      body:type==='in'?inForm:outForm,
+      foot:`<button class="btn btn-ghost" onclick="BS.closeModal()">ยกเลิก</button>${type==='in'?`<button class="btn btn-ghost" style="margin-right:auto" onclick="BS.closeModal();addItem()">${svg('plus')} สินค้าใหม่</button>`:''}<button class="btn btn-pri" onclick="window._doMove('${type}')">${svg('check')} บันทึก</button>`});
+    setTimeout(()=>document.querySelectorAll('#mvReason button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#mvReason button').forEach(x=>x.classList.remove('on'));b.classList.add('on');}),30);
+    window._doMove=async(t)=>{const iid=document.getElementById('mvItem').value;const qty=parseInt(document.getElementById('mvQty').value)||0;if(qty<=0){BS.toast('ใส่จำนวน','x');return;}
+      let note;
+      if(t==='in'){const sup=document.getElementById('mvSup').value.trim();const d=document.getElementById('mvDate').value;note=[sup&&'ผู้จำหน่าย: '+sup,d&&'รับ '+d].filter(Boolean).join(' · ')||null;}
+      else{const reason=(document.querySelector('#mvReason button.on')||{}).dataset?.r||'';const who=document.getElementById('mvWho').value.trim();const extra=document.getElementById('mvNote').value.trim();note=[reason,who&&'โดย '+who,extra].filter(Boolean).join(' · ')||null;}
+      try{await API.post('/inventory/'+iid+'/movement',{type:t,quantity:qty,note});
+        if(t==='in'){const cost=parseFloat(document.getElementById('mvCost').value);if(cost>0){const it=ALL.find(x=>x.id===iid);if(it&&cost!==it.costPerUnit){try{await API.put('/inventory/'+iid,{name:it.name,sku:it.sku,category:it.category,unit:it.unit,costPerUnit:cost,quantity:it.quantity,reorderPoint:it.reorderPoint});}catch(_){}}}}
+        BS.closeModal();BS.toast(t==='in'?'รับเข้าสต็อกแล้ว':'บันทึกการเบิกแล้ว');await load();}catch(e){BS.toast('ไม่สำเร็จ: '+e.message,'x');}};}
+  window.receiveStock=function(id){moveModal('รับสินค้าเข้าสต็อก','in',id);};
+  window.issueStock=function(){moveModal('เบิกของออกจากสต็อก','out',null);};
+
+  // ใบสั่งซื้อ (PO) — ฟอร์มเต็มแบบต้นฉบับ + ยอดประมาณสด, ยืนยัน = รับเข้าสต็อกจริง
+  window.purchaseOrder=function(name){const x=ALL.find(i=>i.name===name);
+    if(!x){BS.toast('ไม่พบสินค้านี้ในคลัง เพิ่มสินค้าก่อน','x');addItem();return;}
+    BS.modal({title:'สร้างใบสั่งซื้อ (PO)',sub:'สั่งซื้อสินค้าเข้าคลัง',w:480,
+      body:`<div class="field"><label>สินค้า</label><input value="${x.name} (${x.sku||'-'})" readonly></div>
+        <div class="grid2"><div class="field"><label>จำนวนสั่งซื้อ</label><input id="poQty" type="number" placeholder="เช่น 30" oninput="window._poCalc()"></div>
+          <div class="field"><label>ราคาต่อหน่วย (บาท)</label><input id="poCost" type="number" value="${x.costPerUnit||''}" oninput="window._poCalc()"></div></div>
+        <div class="field"><label>ผู้จำหน่าย</label><input id="poSup" placeholder="ชื่อร้าน / ซัพพลายเออร์"></div>
+        <div style="background:var(--brand-soft);border-radius:12px;padding:13px 15px;display:flex;justify-content:space-between;align-items:center"><span style="font-weight:600;color:var(--brand-700)">ยอดสั่งซื้อโดยประมาณ</span><b id="poTotal" style="color:var(--brand-700);font-size:16px">0 ฿</b></div>`,
+      foot:`<button class="btn btn-ghost" onclick="BS.closeModal()">ยกเลิก</button><button class="btn btn-pri" onclick="window._poConfirm('${x.id}')">${svg('check')} ยืนยัน & รับเข้าสต็อก</button>`});
+    window._poCalc=()=>{const q=parseInt(document.getElementById('poQty').value)||0;const c=parseFloat(document.getElementById('poCost').value)||0;document.getElementById('poTotal').textContent=fmt(q*c)+' ฿';};
+    window._poConfirm=async(iid)=>{const q=parseInt(document.getElementById('poQty').value)||0;const c=parseFloat(document.getElementById('poCost').value)||0;const sup=document.getElementById('poSup').value.trim();
+      if(q<=0){BS.toast('ใส่จำนวนสั่งซื้อ','x');return;}
+      try{await API.post('/inventory/'+iid+'/movement',{type:'in',quantity:q,note:'PO'+(sup?' · ผู้จำหน่าย: '+sup:'')+' · '+fmt(q*c)+'฿'});
+        const it=ALL.find(z=>z.id===iid);if(it&&c>0&&c!==it.costPerUnit){try{await API.put('/inventory/'+iid,{name:it.name,sku:it.sku,category:it.category,unit:it.unit,costPerUnit:c,quantity:it.quantity,reorderPoint:it.reorderPoint});}catch(_){}}
+        BS.closeModal();BS.toast('สั่งซื้อ & รับเข้าสต็อกแล้ว');await load();}catch(e){BS.toast('ไม่สำเร็จ: '+e.message,'x');}};};
+};
+</script>
+<script src="../assets/api.js?v=2"></script>
+<script src="../assets/shell.js?v=8"></script>
+</body>
+</html>

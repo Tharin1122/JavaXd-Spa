@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 21c-4.5 0-8-2.6-8-6 0 0 2.4.4 4 1.6C10.7 11.7 12 9 12 9s1.3 2.7 4 7.6c1.6-1.2 4-1.6 4-1.6 0 3.4-3.5 6-8 6Z' fill='%236c5ce7'/></svg>">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JavaXd · แดชบอร์ด</title>
+<link rel="stylesheet" href="assets/theme.css?v=1">
+</head>
+<body data-title="แดชบอร์ด">
+
+<template id="page">
+  <div class="layout-2">
+   <!-- ===== MAIN COLUMN ===== -->
+   <div>
+    <!-- stat cards -->
+    <div class="stat-grid">
+      <div class="stat" style="cursor:pointer" onclick="statModal('revday')">
+        <div class="row1"><div class="ic ic-purple" data-i="cal"></div><span class="tt">รายรับวันนี้</span><span class="info" data-i="info"></span></div>
+        <div class="val">18,750 <small>บาท</small></div>
+        <div class="row3"><span class="from">จาก 27 การจอง</span><span class="trend up" data-t="up">12.5%</span></div>
+      </div>
+      <div class="stat" style="cursor:pointer" onclick="statModal('revmonth')">
+        <div class="row1"><div class="ic ic-green" data-i="money"></div><span class="tt">รายรับเดือนนี้</span><span class="info" data-i="info"></span></div>
+        <div class="val">412,950 <small>บาท</small></div>
+        <div class="row3"><span class="from">จาก 215 การจอง</span><span class="trend up" data-t="up">8.3%</span></div>
+      </div>
+      <div class="stat" style="cursor:pointer" onclick="statModal('cust')">
+        <div class="row1"><div class="ic ic-orange" data-i="users"></div><span class="tt">ลูกค้าวันนี้</span><span class="info" data-i="info"></span></div>
+        <div class="val">32 <small>คน</small></div>
+        <div class="row3"><span class="from">ลูกค้าใหม่ 6 คน</span><span class="trend up" data-t="up">9.1%</span></div>
+      </div>
+      <div class="stat" style="cursor:pointer" onclick="statModal('bk')">
+        <div class="row1"><div class="ic ic-blue" data-i="cal"></div><span class="tt">การจองวันนี้</span><span class="info" data-i="info"></span></div>
+        <div class="val">27 <small>การจอง</small></div>
+        <div class="row3"><span class="from">รอดำเนินการ 5</span><span class="trend up" data-t="up">4 ใหม่</span></div>
+      </div>
+    </div>
+
+    <!-- donut + finance -->
+    <div class="grid-2 mb24">
+      <div class="card card-pad">
+        <div class="card-h"><h3>ภาพรวมการจองวันนี้</h3></div>
+        <div class="donut-wrap">
+          <div class="donut" id="donut"><div class="ctr"><b>27</b><span>ทั้งหมด</span></div></div>
+          <div class="legend">
+            <div class="lg"><span class="d" style="background:#22b07d"></span><span class="nm">เสร็จสิ้น</span><span class="vl">15</span><span class="pct">55.6%</span></div>
+            <div class="lg"><span class="d" style="background:#3b9bff"></span><span class="nm">กำลังให้บริการ</span><span class="vl">7</span><span class="pct">25.9%</span></div>
+            <div class="lg"><span class="d" style="background:#f5a623"></span><span class="nm">รอดำเนินการ</span><span class="vl">5</span><span class="pct">18.5%</span></div>
+            <div class="lg"><span class="d" style="background:#c2c7d6"></span><span class="nm">ยกเลิก</span><span class="vl">0</span><span class="pct">0%</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="card card-pad">
+        <div class="card-h"><h3>รายรับ - รายจ่าย (เดือนนี้)</h3></div>
+        <table class="tbl" style="margin-top:-4px">
+          <thead><tr><th>รายการ</th><th style="text-align:right">จำนวนเงิน (บาท)</th></tr></thead>
+          <tbody>
+            <tr><td>รายรับรวม</td><td style="text-align:right;font-weight:700" class="t-green">412,950.00</td></tr>
+            <tr><td>รายจ่ายรวม</td><td style="text-align:right;font-weight:700" class="t-red">85,320.00</td></tr>
+            <tr><td style="font-weight:700;color:var(--brand)">กำไรสุทธิ</td><td style="text-align:right;font-weight:700;font-size:16px;color:var(--brand)">327,630.00</td></tr>
+          </tbody>
+        </table>
+        <div class="flex jb ac" style="margin-top:8px">
+          <div class="prog" style="flex:1;margin-right:16px"><i style="width:79%"></i></div>
+          <a class="btn btn-soft btn-sm" href="pages/finance.html">ดูรายงานการเงิน</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- schedule timeline -->
+    <div class="card card-pad mb24">
+      <div class="card-h">
+        <h3>ตารางงานหมอนวดวันนี้</h3>
+        <div class="flex ac g12" style="margin-left:14px">
+          <button class="icon-btn" style="width:34px;height:34px" data-i="chevL" onclick="shiftDay(-1)"></button>
+          <b style="font-size:13.5px" id="ganttDate">17 พฤษภาคม 2567</b>
+          <button class="icon-btn" style="width:34px;height:34px" data-i="chevR" onclick="shiftDay(1)"></button>
+          <span class="badge b-purple" id="ganttToday">วันนี้</span>
+        </div>
+        <div class="sp flex g12 ac">
+          <a class="btn btn-ghost btn-sm" href="pages/schedule.html" data-i2="filter">ดูตารางเต็ม</a>
+        </div>
+      </div>
+      <div class="gantt" id="gantt"></div>
+      <div class="svlegend" id="svlegend"></div>
+    </div>
+
+    <!-- quick actions -->
+    <div class="quick">
+      <a onclick="BS.openBooking()"><span class="qi" style="background:var(--brand-soft);color:var(--brand)" data-i="cal"></span><div><div class="qt">สร้างการจอง</div><div class="qs">เพิ่มการจองใหม่</div></div></a>
+      <a href="pages/customers.html"><span class="qi" style="background:var(--green-soft);color:#178a61" data-i="users"></span><div><div class="qt">ลูกค้าใหม่</div><div class="qs">เพิ่มลูกค้า</div></div></a>
+      <a href="pages/bookings.html#queue"><span class="qi" style="background:var(--orange-soft);color:#b9791a" data-i="flow"></span><div><div class="qt">จัดการคิว</div><div class="qs">คิวรอ / กำลังให้บริการ</div></div></a>
+      <a href="pages/finance.html"><span class="qi" style="background:var(--blue-soft);color:#2477cc" data-i="chart"></span><div><div class="qt">รายงานการเงิน</div><div class="qs">รายรับ - รายจ่าย</div></div></a>
+      <a href="pages/services.html"><span class="qi" style="background:#f3eafe;color:#8b5cf6" data-i="spa"></span><div><div class="qt">จัดการคอร์ส</div><div class="qs">คอร์ส &amp; แพ็กเกจ</div></div></a>
+      <a href="pages/settings.html"><span class="qi" style="background:#eef0f6;color:#6b7290" data-i="gear"></span><div><div class="qt">ตั้งค่าระบบ</div><div class="qs">ตั้งค่าทั่วไป</div></div></a>
+    </div>
+   </div>
+
+   <!-- ===== RIGHT COLUMN ===== -->
+   <div class="rightcol">
+    <div class="widget">
+      <div class="widget-h"><h3>คิวที่รอดำเนินการ</h3><span class="sp badge b-red">5 รายการ</span></div>
+      <div id="queue"></div>
+      <a class="btn btn-pri" style="width:100%;margin-top:14px" href="pages/bookings.html#queue">จัดการคิวทั้งหมด</a>
+    </div>
+
+    <div class="widget">
+      <div class="widget-h"><h3>ปฏิทินการจอง</h3><span class="sp muted">พ.ค. 2567</span></div>
+      <div class="mcal" id="mcal"></div>
+    </div>
+
+    <div class="widget">
+      <div class="widget-h"><h3>การแจ้งเตือน</h3><a class="sp link" href="pages/logs.html">ดูทั้งหมด</a></div>
+      <div id="notifList"></div>
+    </div>
+   </div>
+  </div>
+</template>
+
+<script>window.BASE='';window.PAGE='dashboard';</script>
+<script>if(!localStorage.getItem('th_auth'))location.href=(window.BASE||'')+'login.html';</script>
+<script>
+window.PAGE_INIT=function(){
+  /* ===== แดชบอร์ดตามบทบาท =====
+     Manager เห็นเฉพาะหน้างาน: ซ่อนรายรับเดือน/กำไรสุทธิ (ของเจ้าของ) → โชว์สต็อกใกล้หมดแทน
+     (Reception/Therapist/Cashier ไม่ถึงหน้านี้ — shell.js?v=8 พาไปหน้าของตัวเอง) */
+  if(window.ROLE_KEY==='Manager'){
+    try{
+      const h1=document.querySelector('.topbar h1');if(h1)h1.textContent='แดชบอร์ดผู้จัดการ (หน้างานวันนี้)';
+      const stats=document.querySelectorAll('.stat-grid .stat');
+      if(stats[1])stats[1].style.display='none'; // รายรับเดือนนี้ = ข้อมูลระดับเจ้าของ
+      document.querySelector('.stat-grid').insertAdjacentHTML('beforeend',
+        `<div class="stat" style="cursor:pointer" onclick="location.href='pages/inventory.html'">
+          <div class="row1"><div class="ic" style="background:#fdeef0;color:#d33c50" data-i="box"></div><span class="tt">สต็อกใกล้หมด</span></div>
+          <div class="val" id="mgLowVal"><span style="opacity:.2">—</span></div>
+          <div class="row3"><span class="from" id="mgLowFrom">กำลังตรวจสต็อก...</span></div>
+        </div>`);
+      // การ์ดรายรับ-รายจ่าย → ซ่อน แล้วแทนด้วยการ์ดสต็อกใกล้หมด (โหลดจาก GET /inventory)
+      const finCard=document.querySelectorAll('.grid-2 .card')[1];
+      if(finCard){finCard.style.display='none';finCard.insertAdjacentHTML('afterend',
+        `<div class="card card-pad"><div class="card-h"><h3>สต็อกใกล้หมด · ต้องสั่งซื้อ</h3><a class="sp btn btn-soft btn-sm" href="pages/inventory.html">จัดการสต็อก</a></div><div id="mgLowList" style="font-size:13px;color:var(--ink-3);padding:8px 0">กำลังโหลด...</div></div>`);}
+      (async()=>{
+        let low=[];
+        try{const r=await API.get('/inventory');const items=(r&&r.items)||[];
+          low=items.filter(i=>{const min=i.minQuantity!=null?i.minQuantity:(i.reorderLevel!=null?i.reorderLevel:5);return (i.quantity||0)<=min;});
+        }catch(e){}
+        const v=document.getElementById('mgLowVal'),f=document.getElementById('mgLowFrom'),L=document.getElementById('mgLowList');
+        if(v)v.innerHTML=low.length+' <small>รายการ</small>';
+        if(f)f.textContent=low.length?'ควรสั่งซื้อภายในสัปดาห์นี้':'สต็อกเพียงพอทุกรายการ ✓';
+        if(L)L.innerHTML=low.length?low.slice(0,5).map(i=>`<div class="flex ac jb" style="padding:8px 0;border-bottom:1px dashed var(--line-2)"><span style="color:var(--ink)">${i.name}</span><span class="badge ${ (i.quantity||0)===0?'b-red':'b-orange'}">เหลือ ${i.quantity||0} ${i.unit||''}</span></div>`).join('')
+          :'<div style="text-align:center;padding:18px 0">ไม่มีรายการใกล้หมด 🎉</div>';
+      })();
+    }catch(e){console.warn('manager dash',e);}
+  }
+  // icons
+  document.querySelectorAll('[data-i]').forEach(e=>{const t=e.textContent.trim();e.innerHTML=svg(e.dataset.i)+(t?'<span>'+t+'</span>':'')});
+  document.querySelectorAll('[data-i2]').forEach(e=>e.insertAdjacentHTML('afterbegin',svg(e.dataset.i2)));
+  document.querySelectorAll('[data-t]').forEach(e=>e.insertAdjacentHTML('afterbegin','<svg viewBox="0 0 24 24" style="width:13px;height:13px"><path d="M5 15l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'));
+  // donut
+  document.getElementById('donut').style.background='conic-gradient(#22b07d 0 55.6%,#3b9bff 0 81.5%,#f5a623 0 100%)';
+  // ล้างเลข mock ใน HTML ก่อนโหลด DB เสร็จ (กันเลขผิดแวบขึ้น)
+  try{
+    var dcb=document.querySelector('#donut .ctr b'); if(dcb)dcb.textContent='';
+    document.querySelectorAll('.legend .vl,.legend .pct').forEach(function(e){e.textContent='';});
+    document.querySelectorAll('.grid-2 .card:nth-child(2) tbody td:last-child').forEach(function(e){e.textContent='—';});
+    var fb=document.querySelector('.widget-h .badge'); if(fb)fb.textContent='';
+    document.querySelectorAll('#queue,#notifList').forEach(function(e){e.innerHTML='<div style="color:var(--ink-3);font-size:12.5px;padding:14px;text-align:center">กำลังโหลด...</div>';});
+  }catch(e){}
+
+  // gantt
+  const T0=9,T1=22,RANGE=T1-T0;
+  const SV={thai:['นวดไทย','#8b7cf0'],oil:['นวดน้ำมัน','#3ea8c9'],aroma:['อโรมา','#e6a23c'],prakob:['ประคบ','#7cc47a'],foot:['นวดเท้า','#f08aa8'],shoulder:['คอบ่าไหล่','#f0b07a'],rest:['พัก / ว่าง','#b9bfd0']};
+  window.GSV=SV;
+  /* gantt ถูก init รอบเดียวใน loadDashboardReal ด้วยข้อมูลจริง + onDate (เลี่ยง init ซ้อน) */
+  document.getElementById('svlegend').innerHTML=Object.values(SV).map(s=>`<div class="it"><span class="d" style="background:${s[1]}"></span>${s[0]}</div>`).join('');
+
+  // queue (กดเพื่อจัดการในหน้านี้)
+  const q=[
+    ['คุณริรินทร์','นวดไทย 1 ชม.','10:30','รอนาน 15 นาที','red','อ้อม'],
+    ['คุณวรพล','นวดน้ำมัน 1.30 ชม.','11:00','รอนาน 5 นาที','red','นุ่น'],
+    ['คุณณัฐชา','ประคบสมุนไพร 1 ชม.','11:30','รอนาน 2 นาที','orange','ฟ้า'],
+    ['Walk-in','นวดเท้า 1 ชม.','11:45','รอคิว','gray','ใบเตย'],
+    ['คุณกฤษฎา','คอบ่าไหล่ 45 นาที','12:00','รอคิว','gray','ปลา'],
+  ];
+  window.QD=q;
+  function renderQueue(){
+    document.getElementById('queue').innerHTML=q.length?q.map((x,i)=>`<div class="qitem" style="cursor:pointer" onclick="queueDetail(${i})">${av(x[0],40)}<div><div class="nm">${x[0]}</div><div class="sv">${x[1]}</div></div><div class="rt"><div class="tm">${x[2]}</div><span class="badge b-${x[4]}" style="margin-top:4px">${x[3]}</span></div></div>`).join('')
+      :'<div style="text-align:center;color:var(--ink-3);font-size:13px;padding:20px 0">ไม่มีคิวรอ 🎉</div>';
+    const b=document.querySelector('.widget-h .badge');if(b)b.textContent=q.length+' รายการ';
+  }
+  renderQueue();
+  window.queueDetail=function(i){
+    const x=q[i];
+    BS.modal({title:'คิวรอ · '+x[0],sub:'จัดการได้ทันทีโดยไม่ต้องสลับหน้า',w:440,
+      body:`<div class="flex ac g12" style="margin-bottom:16px">${av(x[0],46)}<div style="flex:1"><div style="font-weight:700;font-size:15px">${x[0]}</div><div class="sub" style="font-size:12.5px">${x[1]}</div></div><span class="badge b-${x[4]}">${x[3]}</span></div>
+        <div class="bk-info" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;background:var(--card-2);border:1px solid var(--line);border-radius:13px;padding:15px;margin-bottom:4px">
+          <div class="it"><span style="font-size:11px;color:var(--ink-3);display:block">เวลานัด</span><b style="font-weight:600">${x[2]} น.</b></div>
+          <div class="it"><span style="font-size:11px;color:var(--ink-3);display:block">หมอนวดที่จะรับงาน</span><b style="font-weight:600">${x[5]}</b></div>
+        </div>`,
+      foot:`<a class="btn btn-ghost" href="pages/bookings.html#queue" style="text-decoration:none;margin-right:auto">ไปหน้าจัดการคิว →</a>
+        <button class="btn btn-ghost" onclick="BS.closeModal();BS.toast('ยกเลิกคิว ${x[0]}','x');QD.splice(${i},1);RQ()">ยกเลิก</button>
+        <button class="btn btn-pri" onclick="BS.closeModal();BS.toast('เรียกคิว ${x[0]} · ส่งให้ ${x[5]} แล้ว');QD.splice(${i},1);RQ()">${svg('check')} เรียกคิว / เช็คอิน</button>`});
+  };
+  window.RQ=renderQueue;
+
+  // mini calendar — กดวันเพื่อดูการจองของวันนั้น
+  const dows=['อา','จ','อ','พ','พฤ','ศ','ส'];
+  let mc=dows.map(d=>`<div class="dow">${d}</div>`).join('');
+  const start=3, days=31, has=[3,9,17,21,24,28];
+  for(let i=0;i<start;i++)mc+='<div class="dy mut"></div>';
+  for(let d=1;d<=days;d++){
+    let cls='dy';if(d===17)cls+=' today';else if(has.includes(d))cls+=' has';
+    mc+=`<div class="${cls}" style="cursor:pointer" onclick="dayModal(${d})">${d}</div>`;
+  }
+  document.getElementById('mcal').innerHTML=mc;
+  window.dayModal=function(d){
+    const hasBk=has.includes(d)||d===17;
+    const list=d===17?DB.bookings:hasBk?DB.bookings.slice(0,2):[];
+    BS.modal({title:'การจองวันที่ '+d+' พฤษภาคม 2567',sub:list.length?list.length+' การจอง':'ยังไม่มีการจอง',w:440,
+      body:list.length?list.map(b=>`<div class="notif" style="align-items:center">${av(b.cust,36)}<div class="tx" style="margin-left:10px"><div style="font-weight:600">${b.cust}</div><div class="tm" style="color:var(--ink-2)">${b.svc} · หมอนวด${b.th||'-'}</div></div><span class="badge b-purple" style="margin-left:auto">${b.time} น.</span></div>`).join('')
+        :`<div style="text-align:center;padding:24px 0;color:var(--ink-3);font-size:13px">วันนี้ยังว่าง เพิ่มการจองใหม่ได้เลย</div>`,
+      foot:`<a class="btn btn-ghost" href="pages/bookings.html" style="text-decoration:none;margin-right:auto">ดูหน้าการจอง →</a>
+        <button class="btn btn-pri" onclick="BS.closeModal();BS.openBooking()">${svg('plus')} สร้างการจอง</button>`});
+  };
+
+  // notifications — จาก DB กลาง
+  document.getElementById('notifList').innerHTML=DB.notifications.slice(0,4).map(n=>
+    `<a class="notif" href="${n.href}" style="display:flex;text-decoration:none;color:inherit"><span class="nd" style="background:${n.dot}"></span><div class="tx"><div>${n.html}</div><div class="tm">${n.time}</div></div></a>`).join('');
+
+  /* การ์ดสถิติ — กดดูรายละเอียดเป็น modal + ปุ่มไปหน้าเต็ม */
+  const row=(l,v,c)=>`<div class="flex ac jb" style="padding:8px 0;border-bottom:1px dashed var(--line-2)"><span style="font-size:13px;color:var(--ink-2)">${l}</span><b style="font-weight:600;${c?'color:'+c:''}">${v}</b></div>`;
+  window.statModal=function(k){
+    if(k==='revday')BS.modal({title:'รายรับวันนี้ · 18,750 บาท',sub:'17 พฤษภาคม 2567 · 27 การจอง',w:420,
+      body:row('เงินสด','8,400 ฿')+row('โอน / พร้อมเพย์','7,150 ฿')+row('บัตรเครดิต','2,100 ฿')+row('ตัดคอร์ส','1,100 ฿')+row('เฉลี่ยต่อบิล','694 ฿','var(--brand-700)'),
+      foot:`<a class="btn btn-ghost" href="pages/finance.html" style="text-decoration:none;margin-right:auto">รายงานการเงิน →</a><a class="btn btn-pri" href="pages/pos.html" style="text-decoration:none">${svg('receipt')} ออกบิลใหม่</a>`});
+    else if(k==='revmonth')BS.modal({title:'รายรับเดือนนี้ · 412,950 บาท',sub:'พฤษภาคม 2567 · 215 การจอง',w:420,
+      body:row('รายรับรวม','412,950 ฿','#178a61')+row('รายจ่ายรวม','-85,320 ฿','var(--red)')+row('กำไรสุทธิ','327,630 ฿','var(--brand-700)')+row('เทียบเดือนก่อน','+8.3%','#178a61'),
+      foot:`<a class="btn btn-ghost" href="pages/reports.html" style="text-decoration:none;margin-right:auto">รายงานเชิงลึก →</a><a class="btn btn-pri" href="pages/finance.html" style="text-decoration:none">ดูการเงิน</a>`});
+    else if(k==='cust')BS.modal({title:'ลูกค้าวันนี้ · 32 คน',sub:'ลูกค้าใหม่ 6 · ลูกค้าประจำ 26',w:440,
+      body:DB.customers.slice(0,5).map(c=>`<div class="notif" style="align-items:center">${av(c.name,36)}<div class="tx" style="margin-left:10px"><div style="font-weight:600">${c.name}</div><div class="tm" style="color:var(--ink-2)">${c.tier} · ใช้บริการ ${c.visits} ครั้ง</div></div></div>`).join(''),
+      foot:`<a class="btn btn-pri" href="pages/customers.html" style="text-decoration:none">ดูลูกค้าทั้งหมด →</a>`});
+    else BS.modal({title:'การจองวันนี้ · 27 รายการ',sub:'อัปเดตเรียลไทม์',w:420,
+      body:row('เสร็จสิ้น','15 รายการ','#178a61')+row('กำลังให้บริการ','7 รายการ','#2477cc')+row('รอดำเนินการ','5 รายการ','#b9791a')+row('ยกเลิก','0 รายการ'),
+      foot:`<a class="btn btn-ghost" href="pages/bookings.html#queue" style="text-decoration:none;margin-right:auto">จัดการคิว →</a><button class="btn btn-pri" onclick="BS.closeModal();BS.openBooking()">${svg('plus')} สร้างการจอง</button>`});
+  };
+
+  // ===== โหลดข้อมูลจริงจาก API ทับ mock =====
+  loadDashboardReal();
+
+  // ===== realtime: อัปเดตอัตโนมัติเมื่อมีการเปลี่ยนแปลงจากผู้ใช้คนอื่น (ไม่ต้องรีเฟรช) =====
+  if(window.RT)RT.onUpdate(function(ev){
+    clearTimeout(window._dashRt);
+    window._dashRt=setTimeout(function(){loadDashboardReal();},700);
+  });
+};
+
+async function loadDashboardReal(){
+  try{
+    const d = await API.get('/dashboard');
+    const q = d.queue, tot = q.totalToday || 1;
+    const stats = document.querySelectorAll('.stat-grid .stat');
+    const tr=d.trends||{};
+    // อัปเดต trend badge ด้วย % จริง (เขียว=โต แดง=ลด) · ลบทิ้งถ้าไม่มีข้อมูล
+    const setTrend=(el,pct,label)=>{ if(!el)return; let b=el.querySelector('.trend'); if(pct==null||isNaN(pct)){if(b)b.remove();return;}
+      const up=pct>=0; if(!b){b=document.createElement('span');b.className='trend';el.querySelector('.row3').appendChild(b);}
+      b.className='trend '+(up?'up':'down'); b.style.color=up?'':'var(--red)';
+      b.innerHTML='<svg viewBox="0 0 24 24" style="width:13px;height:13px;'+(up?'':'transform:rotate(180deg)')+'"><path d="M5 15l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'+(up?'+':'')+pct+'% '+(label||''); };
+    const setStat=(el,val,unit,from)=>{ if(!el)return; const v=el.querySelector('.val'); if(v)v.innerHTML=val+' <small>'+unit+'</small>'; const f=el.querySelector('.from'); if(f)f.textContent=from; };
+    setStat(stats[0], API.baht(d.revenue.totalRevenue),'บาท','จาก '+d.revenue.totalReceipts+' บิล'); setTrend(stats[0],tr.revenueDay,'จากเมื่อวาน');
+    setStat(stats[1], API.baht(d.monthlyRevenue.totalRevenue),'บาท','จาก '+d.monthlyRevenue.totalReceipts+' บิล'); setTrend(stats[1],tr.revenueMonth,'จากเดือนก่อน');
+    setStat(stats[2], q.totalToday,'คน','รอคิว '+q.waiting+' คน'); setTrend(stats[2],tr.customers,'จากเมื่อวาน');
+    setStat(stats[3], d.bookings.total,'การจอง','รอดำเนินการ '+d.bookings.pending); setTrend(stats[3],tr.bookings,'จากเมื่อวาน');
+    // การ์ดคลิกดูรายละเอียดได้ (reuse modal เดียวกับหน้าอื่น)
+    BS.statDetails([
+      {title:'รายรับวันนี้ · '+API.baht(d.revenue.totalRevenue)+' ฿',sub:'จากบิลที่ชำระแล้ววันนี้',rows:[['จำนวนบิล',d.revenue.totalReceipts+' บิล'],['เฉลี่ยต่อบิล',d.revenue.totalReceipts?API.baht(Math.round(d.revenue.totalRevenue/d.revenue.totalReceipts))+' ฿':'—'],['ดูรายละเอียดเต็ม','หน้า "การเงิน"','var(--brand-700)']]},
+      {title:'รายรับเดือนนี้ · '+API.baht(d.monthlyRevenue.totalRevenue)+' ฿',sub:'สะสมตั้งแต่ต้นเดือน',rows:[['จำนวนบิล',d.monthlyRevenue.totalReceipts+' บิล'],['เฉลี่ยต่อบิล',d.monthlyRevenue.totalReceipts?API.baht(Math.round(d.monthlyRevenue.totalRevenue/d.monthlyRevenue.totalReceipts))+' ฿':'—']]},
+      {title:'ลูกค้าวันนี้ · '+q.totalToday+' คน',sub:'สถานะคิวตอนนี้',rows:[['รอคิว',q.waiting],['กำลังบริการ',q.inService],['จบงานแล้ว',q.completed],['ยกเลิก',q.cancelled]]},
+      {title:'การจองวันนี้ · '+d.bookings.total,sub:'สถานะการจอง',rows:[['รอดำเนินการ',d.bookings.pending],['ทั้งหมดวันนี้',d.bookings.total],['ดูรายการเต็ม','หน้า "การจอง & คิวงาน"','var(--brand-700)']]},
+    ]);
+    // donut
+    let a=0; const seg=[[q.completed,'#22b07d'],[q.inService,'#3b9bff'],[q.waiting,'#f5a623'],[q.cancelled,'#c2c7d6']];
+    const dn=document.getElementById('donut');
+    if(dn) dn.style.background='conic-gradient('+seg.map(s=>{const f=a/tot*360;a+=s[0];return s[1]+' '+f+'deg '+(a/tot*360)+'deg'}).join(',')+')';
+    const cb=document.querySelector('#donut .ctr b'); if(cb)cb.textContent=q.totalToday;
+    const lgs=document.querySelectorAll('.legend .lg');
+    [q.completed,q.inService,q.waiting,q.cancelled].forEach((v,i)=>{ if(lgs[i]){ const vl=lgs[i].querySelector('.vl'); if(vl)vl.textContent=v; const pc=lgs[i].querySelector('.pct'); if(pc)pc.textContent=(v/tot*100).toFixed(1)+'%'; }});
+    // finance (รายรับ/รายจ่าย/กำไร) — ดึงรายจ่ายจริงจาก /expense
+    let monthExpense=0;
+    try{ const ex=await API.get('/expense'); monthExpense=(ex&&ex.total)||0; }catch(e){}
+    window.MEXP=monthExpense;
+    const fin=document.querySelectorAll('.grid-2 .card')[1];
+    if(fin){ const tds=fin.querySelectorAll('tbody td:last-child');
+      const rev=d.monthlyRevenue.totalRevenue, profit=rev-monthExpense;
+      if(tds[0])tds[0].textContent=API.baht(rev)+'.00';
+      if(tds[1])tds[1].textContent=API.baht(monthExpense)+'.00';
+      if(tds[2]){tds[2].textContent=API.baht(profit)+'.00';tds[2].style.color=profit<0?'var(--red)':'';}
+      // progress = อัตรากำไรสุทธิจริง (กำไร/รายรับ)
+      const pb=fin.querySelector('.prog i'); if(pb){const m=rev>0?Math.max(0,Math.min(100,Math.round(profit/rev*100))):0;pb.style.width=m+'%';pb.parentElement.title='อัตรากำไรสุทธิ '+m+'%';}
+    }
+    // queue — คลิกเปิด popup รายละเอียด + action จริง
+    const ql=q.waitingList||[]; window.QWAIT=ql;
+    const qel=document.getElementById('queue');
+    if(qel) qel.innerHTML = ql.length? ql.map(x=>{const nm=(x.customer&&x.customer.displayName)||'-';return `<div class="qitem" style="cursor:pointer" onclick="queueDetail('${x.id}')">${av(nm,40)}<div><div class="nm">${nm}</div><div class="sv">${x.serviceCount||0} บริการ${x.queueNo?' · '+x.queueNo:''}</div></div><div class="rt"><div class="tm">${API.fmtTime(x.arrivalTime)}</div><span class="badge b-orange" style="margin-top:4px">รอคิว</span></div></div>`}).join('') : '<div style="text-align:center;color:var(--ink-3);font-size:13px;padding:20px 0">ไม่มีคิวรอ 🎉</div>';
+    const bd=document.querySelector('.widget-h .badge'); if(bd)bd.textContent=q.waiting+' รายการ';
+    window.queueDetail=async function(id){
+      BS.modal({title:'คิวที่รอ',sub:'กำลังโหลด...',w:440,body:'<div style="padding:20px 0;text-align:center;color:var(--ink-3)">กำลังโหลด...</div>'});
+      let w;try{w=await API.get('/walk-in/'+id);}catch(e){BS.toast('โหลดคิวไม่สำเร็จ','x');return;}
+      const nm=(w.customer&&w.customer.displayName)||'ลูกค้า';
+      const waitMin=w.arrivalTime?Math.max(0,Math.round((Date.now()-new Date(w.arrivalTime).getTime())/60000)):null;
+      const waitTxt=waitMin==null?'':' · รอแล้ว '+(waitMin>=60?Math.floor(waitMin/60)+' ชม. '+(waitMin%60)+' นาที':waitMin+' นาที');
+      // หาหมอนวดที่ "ทำบริการนี้ได้ + ว่าง" จริง (กันเรียกคิวให้คนที่ทำไม่ได้)
+      const serviceIds=[...new Set((w.items||[]).map(it=>it.service&&it.service.id).filter(Boolean))];
+      let avail=[];
+      try{ const qs=serviceIds.map(s=>'serviceIds='+s).join('&'); const map=await API.get('/walk-in/available-therapists?'+qs);
+        const lists=serviceIds.map(s=>(map[s]||[])); if(lists.length)avail=lists[0].filter(t=>lists.every(l=>l.some(x=>x.id===t.id))); }catch(e){}
+      const svcNames=(w.items||[]).map(it=>it.service&&it.service.name).join(', ');
+      BS.modal({title:'คิว '+(w.queueNo||'')+' · '+nm,sub:'จัดการคิวได้ทันที',w:440,
+        body:`<div class="flex ac g12" style="margin-bottom:14px">${av(nm,46)}<div style="flex:1"><div style="font-weight:700;font-size:15px">${nm}</div><div class="sub" style="font-size:12.5px">${(w.customer&&w.customer.phone)||''} · เข้าคิว ${API.fmtTime(w.arrivalTime)}${waitTxt}</div></div><span class="badge b-orange">รอคิว</span></div>
+          ${(w.items||[]).map(it=>`<div class="flex ac jb" style="padding:8px 0;border-bottom:1px solid var(--line)"><div><b style="font-weight:600;font-size:13px">${it.service&&it.service.name}</b></div><b>${API.baht(it.price)} ฿</b></div>`).join('')||'<div class="sub" style="font-size:12px">ไม่มีรายการ</div>'}
+          <div class="field" style="margin-top:12px;margin-bottom:0"><label>หมอนวดที่ทำ "${svcNames}" ได้ และว่างขณะนี้</label>
+          ${avail.length?`<select id="qTh">${avail.map(t=>`<option value="${t.id}">${t.displayName}${t.code?' · '+t.code:''}</option>`).join('')}</select>`:`<div style="color:var(--red);font-size:12.5px;padding:8px 11px;background:#fdecee;border:1px solid #f4ccd0;border-radius:10px">⚠️ ขณะนี้ไม่มีหมอนวดที่ทำบริการนี้ได้และว่าง · รอหมอนวดว่างก่อนจึงเรียกคิวได้</div>`}</div>`,
+        foot:`<button class="btn btn-ghost btn-sm" style="color:var(--red);border-color:#f4ccd0;margin-right:auto" onclick="window._qCancel('${id}')">ยกเลิกคิว</button>
+          <a class="btn btn-ghost btn-sm" href="pages/bookings.html#queue" style="text-decoration:none">ไปจัดการคิว</a>
+          <button class="btn btn-pri btn-sm" ${avail.length?'':'disabled style="opacity:.5;cursor:not-allowed"'} onclick="window._qStart('${id}')">${svg('check')} เรียกคิว</button>`});
+      window._qStart=async(wid)=>{
+        const sel=document.getElementById('qTh'); const tid=sel?sel.value:null;
+        if(!tid){BS.toast('ไม่มีหมอนวดที่ทำบริการนี้ได้และว่าง','x');return;}
+        const thName=sel.options[sel.selectedIndex].text;
+        try{ await API.patch('/walk-in/'+wid+'/assign',{therapistId:tid,roomId:null}); await API.patch('/walk-in/'+wid+'/start');
+          BS.closeModal();BS.toast('เรียกคิวแล้ว · มอบหมาย '+thName+' เริ่มบริการ');loadDashboardReal();
+        }catch(e){BS.toast('ไม่สำเร็จ: '+e.message,'x');}
+      };
+      window._qCancel=async(wid)=>{try{await API.patch('/walk-in/'+wid+'/cancel',{reason:'ยกเลิกจากแดชบอร์ด'});BS.closeModal();BS.toast('ยกเลิกคิวแล้ว','x');loadDashboardReal();}catch(e){BS.toast('ไม่สำเร็จ','x');}};
+    };
+
+    // ===== gantt: ตารางงานหมอนวด จากข้อมูลจริง =====
+    try{
+      const catKey={'นวดไทย':'thai','นวดน้ำมัน':'oil','นวดน้ำมันอโรมา':'oil','อโรมา':'aroma','ประคบ':'prakob','นวดเท้า':'foot','คอบ่าไหล่':'shoulder'};
+      const hr=(iso)=>{const dd=new Date(iso);return dd.getHours()+dd.getMinutes()/60;};
+      // ดึงตารางของวันที่ระบุ → แปลงเป็น rows ของ gantt (ใช้ทั้งตอนโหลดแรก + ตอนเปลี่ยนวัน)
+      window.fetchGanttRows=async function(dateIso){
+        const sch=await API.get('/dashboard/schedule'+(dateIso?('?date='+dateIso):''));
+        return (sch.therapists||[]).map(th=>({
+          n: th.displayName,
+          thId: th.id,
+          sv: [...new Set((th.items||[]).map(i=>i.serviceCategory).filter(Boolean))].join(', '),
+          st: th.currentStatus===0?'online':'busy',
+          b: (th.items||[]).map(i=>[hr(i.startTime),hr(i.endTime),i.serviceName,i.customerName||'',catKey[i.serviceCategory]||'thai',i.id,i.source,i.walkInId||null]).filter(b=>b[1]>9 && b[0]<22)
+        }));
+      };
+      const rows=await window.fetchGanttRows();
+      if(window.initGantt && window.GSV){
+        window.GROWS=rows;
+        initGantt({mount:'gantt',rows,SV:window.GSV,base:'',dateEl:'ganttDate',todayBadge:'ganttToday',onDate:window.fetchGanttRows});
+      }
+    }catch(e){ console.error('gantt', e); }
+
+    // ===== stat-card modals: ข้อมูลจริง =====
+    window.DASH=d;
+    const methodTh={Cash:'เงินสด',Transfer:'โอน / พร้อมเพย์',QR:'QR พร้อมเพย์',Card:'บัตรเครดิต'};
+    const row=(l,v,c)=>`<div class="flex ac jb" style="padding:8px 0;border-bottom:1px dashed var(--line-2)"><span style="font-size:13px;color:var(--ink-2)">${l}</span><b style="font-weight:600;${c?'color:'+c:''}">${v}</b></div>`;
+    window.statModal=function(k){
+      const rev=d.revenue, mrev=d.monthlyRevenue, qq=d.queue, bk=d.bookings;
+      if(k==='revday'){
+        const bm=(rev.byMethod||[]);
+        const avg=rev.totalReceipts?Math.round(rev.totalRevenue/rev.totalReceipts):0;
+        const body=(bm.length?bm.map(m=>row(methodTh[m.method]||m.method,API.baht(m.amount)+' ฿')).join(''):'<div style="padding:10px 0;color:var(--ink-3);font-size:13px">ยังไม่มีรายรับวันนี้</div>')
+          +row('ส่วนลดรวม','-'+API.baht(rev.totalDiscount)+' ฿','var(--red)')+row('เฉลี่ยต่อบิล',API.baht(avg)+' ฿','var(--brand-700)');
+        BS.modal({title:'รายรับวันนี้ · '+API.baht(rev.totalRevenue)+' บาท',sub:API.fmtDate(d.date)+' · '+rev.totalReceipts+' บิล',w:420,body,
+          foot:`<a class="btn btn-ghost" href="pages/finance.html" style="text-decoration:none;margin-right:auto">รายงานการเงิน →</a><a class="btn btn-pri" href="pages/pos.html" style="text-decoration:none">${svg('receipt')} ออกบิลใหม่</a>`});
+      } else if(k==='revmonth'){
+        const mexp=window.MEXP||0; const mprofit=mrev.totalRevenue-mexp;
+        BS.modal({title:'รายรับเดือนนี้ · '+API.baht(mrev.totalRevenue)+' บาท',sub:mrev.totalReceipts+' บิล',w:420,
+          body:row('รายรับรวม',API.baht(mrev.totalRevenue)+' ฿','#178a61')+row('รายจ่ายรวม','-'+API.baht(mexp)+' ฿','var(--red)')+row('กำไรสุทธิ',API.baht(mprofit)+' ฿',mprofit<0?'var(--red)':'var(--brand-700)')+row('จำนวนบิล',mrev.totalReceipts+' บิล'),
+          foot:`<a class="btn btn-ghost" href="pages/reports.html" style="text-decoration:none;margin-right:auto">รายงานเชิงลึก →</a><a class="btn btn-pri" href="pages/finance.html" style="text-decoration:none">ดูการเงิน</a>`});
+      } else if(k==='cust'){
+        const tierOf=s=>s>=100000?'สมาชิกคนสำคัญ':s>=30000?'สมาชิกสะสมแต้ม':'ทั่วไป';
+        BS.modal({title:'ลูกค้าวันนี้ · '+qq.totalToday+' คน',sub:'รอคิว '+qq.waiting+' · กำลังให้บริการ '+qq.inService+' · เสร็จ '+qq.completed,w:420,body:'<div style="padding:18px;text-align:center;color:var(--ink-3)">กำลังโหลด...</div>',
+          foot:`<a class="btn btn-pri" href="pages/customers.html" style="text-decoration:none">ดูลูกค้าทั้งหมด →</a>`});
+        (async()=>{ let cs=[]; try{const r=await API.get('/customer?pageSize=200'); cs=((r&&r.items)||[]).sort((a,b)=>(b.totalVisits||0)-(a.totalVisits||0)).slice(0,5);}catch(e){}
+          const card=document.getElementById('genCard'); if(!card)return;
+          const bodyEl=card.querySelector('.modal-b');
+          if(bodyEl)bodyEl.innerHTML=cs.length?cs.map(c=>`<div class="flex ac g12" style="padding:10px 0;border-bottom:1px solid var(--line)">${av(c.displayName,36)}<div style="flex:1"><div style="font-weight:600;font-size:13.5px">${c.displayName}</div><div class="sub" style="font-size:12px">${tierOf(c.totalSpent||0)} · ใช้บริการ ${c.totalVisits||0} ครั้ง</div></div></div>`).join(''):'<div style="padding:16px 0;text-align:center;color:var(--ink-3);font-size:13px">ยังไม่มีข้อมูลลูกค้า</div>';
+        })();
+      } else {
+        BS.modal({title:'การจองวันนี้ · '+bk.total+' รายการ',sub:'อัปเดตเรียลไทม์',w:420,
+          body:row('รอดำเนินการ',bk.pending+' รายการ','#b9791a')+row('ยืนยันแล้ว',bk.confirmed+' รายการ','#2477cc')+row('กำลังให้บริการ',bk.inProgress+' รายการ','#2477cc')+row('เสร็จสิ้น',bk.completed+' รายการ','#178a61')+row('ยกเลิก',bk.cancelled+' รายการ')+row('ไม่มาตามนัด',bk.noShow+' รายการ'),
+          foot:`<a class="btn btn-ghost" href="pages/bookings.html#queue" style="text-decoration:none;margin-right:auto">จัดการคิว →</a><button class="btn btn-pri" onclick="BS.closeModal();BS.openBooking()">${svg('plus')} สร้างการจอง</button>`});
+      }
+    };
+
+    // ===== mini calendar: วันนี้จริง + จุดน้ำเงินวันที่มีการจอง + คลิกดูการจองจริง =====
+    try{
+      const dows=['อา','จ','อ','พ','พฤ','ศ','ส'];
+      const now=new Date(); const y=now.getFullYear(), mo=now.getMonth();
+      const firstDow=new Date(y,mo,1).getDay(); const dim=new Date(y,mo+1,0).getDate(); const todayD=now.getDate();
+      // หาวันในเดือนนี้ที่มีการจอง (จาก /booking ทั้งหมด) → ใส่จุด
+      const hasDays=new Set();
+      try{ const all=await API.get('/booking?pageSize=500'); ((all&&all.items)||[]).forEach(b=>{const dt=b.bookingDate&&new Date(b.bookingDate); if(dt&&dt.getFullYear()===y&&dt.getMonth()===mo)hasDays.add(dt.getDate());}); }catch(e){}
+      let mc=dows.map(dw=>`<div class="dow">${dw}</div>`).join('');
+      for(let i=0;i<firstDow;i++)mc+='<div class="dy mut"></div>';
+      for(let dd=1;dd<=dim;dd++){ let cls='dy'+(dd===todayD?' today':'')+(hasDays.has(dd)&&dd!==todayD?' has':''); mc+=`<div class="${cls}" style="cursor:pointer" onclick="dayModal(${dd})">${dd}</div>`; }
+      const mcel=document.getElementById('mcal'); if(mcel)mcel.innerHTML=mc;
+      const mlabel=document.querySelector('.widget-h .muted'); if(mlabel)mlabel.textContent=now.toLocaleDateString('th-TH',{month:'short',year:'numeric'});
+      window.dayModal=async function(dd){
+        const iso=`${y}-${String(mo+1).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
+        BS.modal({title:'การจองวันที่ '+dd,sub:'กำลังโหลด...',w:440,body:'<div style="padding:20px 0;text-align:center;color:var(--ink-3)">กำลังโหลด...</div>'});
+        let list=[]; try{ list=await API.get('/booking?date='+iso)||[]; }catch{}
+        if(!Array.isArray(list))list=list.items||[];
+        BS.modal({title:'การจองวันที่ '+API.fmtDate(iso),sub:list.length?list.length+' การจอง':'ยังไม่มีการจอง',w:440,
+          body:list.length?list.map(b=>{const nm=(b.customer&&b.customer.displayName)||b.customerName||'-';const tm=API.fmtTime(b.startTime)||b.startTime||'';return `<div class="notif" style="align-items:center">${av(nm,36)}<div class="tx" style="margin-left:10px"><div style="font-weight:600">${nm}</div><div class="tm" style="color:var(--ink-2)">${(b.items&&b.items[0]&&b.items[0].serviceName)||b.bookingNo||''}</div></div><span class="badge b-purple" style="margin-left:auto">${tm}</span></div>`}).join(''):`<div style="text-align:center;padding:24px 0;color:var(--ink-3);font-size:13px">วันนี้ยังว่าง เพิ่มการจองใหม่ได้เลย</div>`,
+          foot:`<a class="btn btn-ghost" href="pages/bookings.html" style="text-decoration:none;margin-right:auto">ดูหน้าการจอง →</a><button class="btn btn-pri" onclick="BS.closeModal();BS.openBooking()">${svg('plus')} สร้างการจอง</button>`});
+      };
+    }catch(e){ console.error('calendar', e); }
+
+    // ===== notifications: จากกิจกรรมจริง (คิว + การจอง) =====
+    try{
+      const notifs=[];
+      (d.queue.inServiceList||[]).slice(0,2).forEach(w=>{const nm=(w.customer&&w.customer.displayName)||'-';notifs.push({dot:'#3b9bff',html:'<b>'+nm+'</b> กำลังรับบริการ',time:API.fmtTime(w.startTime),href:'pages/bookings.html#queue'});});
+      (d.queue.waitingList||[]).slice(0,2).forEach(w=>{const nm=(w.customer&&w.customer.displayName)||'-';notifs.push({dot:'#f5a623',html:'<b>'+nm+'</b> เข้าคิวรอบริการ',time:API.fmtTime(w.arrivalTime),href:'pages/bookings.html#queue'});});
+      (d.bookings.upcomingList||[]).slice(0,2).forEach(b=>{const nm=(b.customer&&b.customer.displayName)||'-';notifs.push({dot:'#8b5cf6',html:'<b>'+nm+'</b> มีนัด '+(b.itemCount||0)+' บริการ',time:API.fmtTime(b.startTime),href:'pages/bookings.html'});});
+      const nl=document.getElementById('notifList');
+      if(nl)nl.innerHTML=notifs.length?notifs.slice(0,5).map(n=>`<a class="notif" href="${n.href}" style="display:flex;text-decoration:none;color:inherit"><span class="nd" style="background:${n.dot}"></span><div class="tx"><div>${n.html}</div><div class="tm">${n.time}</div></div></a>`).join(''):'<div style="padding:16px 0;text-align:center;color:var(--ink-3);font-size:13px">ยังไม่มีการแจ้งเตือน</div>';
+    }catch(e){ console.error('notif', e); }
+  }catch(e){ console.error('dashboard load', e); }
+}
+</script>
+<script src="assets/api.js?v=2"></script>
+<script src="assets/gantt.js?v=3h"></script>
+<script src="assets/shell.js?v=8"></script>
+</body>
+</html>

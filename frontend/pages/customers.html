@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 21c-4.5 0-8-2.6-8-6 0 0 2.4.4 4 1.6C10.7 11.7 12 9 12 9s1.3 2.7 4 7.6c1.6-1.2 4-1.6 4-1.6 0 3.4-3.5 6-8 6Z' fill='%236c5ce7'/></svg>">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JavaXd · ลูกค้า</title>
+<link rel="stylesheet" href="../assets/theme.css?v=1">
+<style>
+.drawer-bg{position:fixed;inset:0;background:rgba(20,24,40,.45);backdrop-filter:blur(3px);z-index:70;display:none}
+.drawer-bg.show{display:block}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:440px;max-width:92vw;background:#fff;z-index:71;
+  box-shadow:-10px 0 50px rgba(0,0,0,.18);transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);overflow-y:auto}
+.drawer.show{transform:none}
+.dr-head{padding:24px;background:linear-gradient(150deg,#2a3052,#1c2138);color:#fff;position:relative}
+.dr-head .x{position:absolute;top:18px;right:18px;width:34px;height:34px;border-radius:9px;background:rgba(255,255,255,.12);display:grid;place-items:center;color:#fff}
+.tier{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;padding:4px 11px;border-radius:20px}
+.tier.gold{background:linear-gradient(135deg,#f7d774,#e9b949);color:#5c4500}
+.tier.silver{background:#e6e9f2;color:#5a607a}
+.tier.plat{background:linear-gradient(135deg,#c7b3f5,#9b85ec);color:#fff}
+.minicard{display:flex;flex-direction:column;gap:3px;padding:14px;background:var(--card-2);border:1px solid var(--line);border-radius:13px}
+.minicard b{font-size:18px}.minicard span{font-size:11.5px;color:var(--ink-3)}
+.hist{display:flex;gap:12px;padding:13px 0;border-bottom:1px solid var(--line)}
+.hist .hd{width:9px;height:9px;border-radius:50%;background:var(--brand);margin-top:5px;flex:0 0 9px}
+</style>
+</head>
+<body data-title="ลูกค้า">
+
+<template id="page">
+  <div class="page-h">
+    <div class="ttl"><h2>ลูกค้า</h2><p>ฐานข้อมูลลูกค้า ประวัติการใช้บริการ และสมาชิก</p></div>
+    <div class="sp">
+      <button class="btn btn-ghost" onclick="BS.exportModal({title:'นำเข้า / ส่งออกข้อมูลลูกค้า',sub:'ส่งออกฐานข้อมูลลูกค้า หรือนำเข้าจากไฟล์ CSV',extra:'<div class=\'field\'><label>นำเข้าจากไฟล์</label><input type=\'file\' style=\'padding:9px\'></div>'})" data-i="down">นำเข้า / ส่งออก</button>
+      <button class="btn btn-pri" onclick="addCustomer()" data-i="plus">เพิ่มลูกค้า</button>
+    </div>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat"><div class="row1"><div class="ic ic-purple" data-i="users"></div><span class="tt">ลูกค้าทั้งหมด</span></div><div class="val">1,284</div><div class="row3"><span class="from">ในระบบ</span><span class="trend up">+6 วันนี้</span></div></div>
+    <div class="stat"><div class="row1"><div class="ic ic-green" data-i="badge"></div><span class="tt">สมาชิกคนสำคัญ</span></div><div class="val">186</div><div class="row3"><span class="from">Gold + Platinum</span></div></div>
+    <div class="stat"><div class="row1"><div class="ic ic-orange" data-i="spa"></div><span class="tt">มีคอร์สคงเหลือ</span></div><div class="val">312</div><div class="row3"><span class="from">แพ็กเกจ active</span></div></div>
+    <div class="stat"><div class="row1"><div class="ic ic-blue" data-i="star"></div><span class="tt">คะแนนรีวิวเฉลี่ย</span></div><div class="val">4.9 <small>/ 5</small></div><div class="row3"><span class="from">จาก 842 รีวิว</span></div></div>
+  </div>
+
+  <div class="card card-pad">
+    <div class="flex ac g12 wrap" style="margin-bottom:16px">
+      <div class="search" style="max-width:300px;flex:0 0 300px"><input placeholder="ค้นหาชื่อ / เบอร์ / สมาชิก"></div>
+      <div class="seg"><button class="on">ทั้งหมด</button><button>Platinum</button><button>Gold</button><button>ทั่วไป</button></div>
+      <span class="mla muted" style="font-size:13px">1,284 รายชื่อ</span>
+    </div>
+    <table class="tbl" id="cust-tbl"></table>
+  </div>
+</template>
+
+<script>window.BASE='../';window.PAGE='customers';</script>
+<script>if(!localStorage.getItem('th_auth'))location.href=(window.BASE||'')+'login.html';</script>
+<script>
+window.PAGE_INIT=function(){
+  document.querySelectorAll('[data-i]').forEach(e=>{const t=e.textContent.trim();e.innerHTML=svg(e.dataset.i)+(t?'<span>'+t+'</span>':'')});
+
+  // ===== ข้อมูลลูกค้าจริงจาก API =====
+  let ALL=[]; let FILTER='all'; let Q='';
+  const tierOf=(spent)=>spent>=100000?['plat','Platinum']:spent>=30000?['gold','Gold']:['silver','ทั่วไป'];
+  const relTime=(iso)=>{ if(!iso)return '—'; const d=new Date(iso),now=new Date(),days=Math.floor((now-d)/86400000); if(days<=0)return 'วันนี้'; if(days===1)return 'เมื่อวาน'; if(days<7)return days+' วันก่อน'; if(days<30)return Math.floor(days/7)+' สัปดาห์ก่อน'; return API.fmtDate(iso); };
+
+  // drawer
+  const dr=document.createElement('div');dr.className='drawer-bg';dr.id='drbg';
+  dr.innerHTML='<div class="drawer" id="drawer"></div>';
+  document.body.appendChild(dr);
+  dr.addEventListener('click',e=>{if(e.target===dr)closeDr()});
+
+  let PAGE_N=1; const PER_PAGE=12;
+  window._cuPage=function(n){PAGE_N=n;render();};
+  function render(){
+    let list=ALL.slice();
+    if(FILTER!=='all')list=list.filter(c=>tierOf(c.totalSpent)[0]===FILTER);
+    if(Q){const q=Q.toLowerCase();list=list.filter(c=>(c.displayName||'').toLowerCase().includes(q)||(c.phone||'').includes(Q));}
+    list.sort((a,b)=>(b.totalSpent||0)-(a.totalSpent||0));
+    const totalPages=Math.max(1,Math.ceil(list.length/PER_PAGE));
+    if(PAGE_N>totalPages)PAGE_N=totalPages;
+    const fullN=list.length; list=list.slice((PAGE_N-1)*PER_PAGE,PAGE_N*PER_PAGE);
+    window._cuPager=totalPages>1?('<tr><td colspan="6" style="text-align:center;padding:12px"><div style="display:inline-flex;gap:6px;align-items:center"><button class="btn btn-ghost btn-sm" '+(PAGE_N<=1?'disabled style="opacity:.4"':'')+' onclick="event.stopPropagation();_cuPage('+(PAGE_N-1)+')">← ก่อนหน้า</button><span style="font-size:12.5px;color:var(--ink-2);padding:0 8px">หน้า '+PAGE_N+' / '+totalPages+'</span><button class="btn btn-ghost btn-sm" '+(PAGE_N>=totalPages?'disabled style="opacity:.4"':'')+' onclick="event.stopPropagation();_cuPage('+(PAGE_N+1)+')">ถัดไป →</button></div></td></tr>'):'';
+    const cnt=document.querySelector('.mla.muted'); if(cnt)cnt.textContent='แสดง '+list.length+' จาก '+fullN+' รายชื่อ';
+    document.getElementById('cust-tbl').innerHTML=
+      '<thead><tr><th>ลูกค้า</th><th>ระดับสมาชิก</th><th>เข้าใช้บริการ</th><th style="text-align:right">ยอดสะสม</th><th>ล่าสุด</th><th></th></tr></thead><tbody>'+
+      (list.length?list.map(c=>{const t=tierOf(c.totalSpent);return `<tr style="cursor:pointer" onclick="openDr('${c.id}')">
+        <td><div class="cell-u">${av(c.displayName,38)}<div><div class="nm">${c.displayName}</div><div class="sub">${c.phone||'—'}</div></div></div></td>
+        <td><span class="tier ${t[0]}">${t[1]}</span></td>
+        <td><b style="font-weight:600">${c.totalVisits||0}</b> ครั้ง</td>
+        <td style="text-align:right;font-weight:600">${fmt(c.totalSpent||0)} ฿</td>
+        <td class="sub">${relTime(c.lastVisitAt)}</td>
+        <td><button class="row-act" style="display:inline-flex"><button data-i="chevR"></button></button></td>
+      </tr>`}).join(''):'')+window._cuPager+'</tbody>';
+    if(!list.length)document.querySelector('#cust-tbl tbody').innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--ink-3);padding:30px">ไม่พบลูกค้า</td></tr>';
+    document.querySelectorAll('#cust-tbl [data-i]').forEach(e=>e.innerHTML=svg(e.dataset.i));
+    // stat cards (จริง)
+    const stats=document.querySelectorAll('.stat-grid .val');
+    const members=ALL.filter(c=>c.totalSpent>=30000).length;
+    const regular=ALL.filter(c=>(c.totalVisits||0)>=10).length;
+    const avg=ALL.length?Math.round(ALL.reduce((s,c)=>s+(c.totalSpent||0),0)/ALL.length):0;
+    if(stats[0])stats[0].textContent=fmt(ALL.length);
+    if(stats[1])stats[1].textContent=fmt(members);
+    if(stats[2])stats[2].textContent=fmt(regular);
+    if(stats[3])stats[3].innerHTML=fmt(avg)+' <small>฿</small>';
+    const lbls=document.querySelectorAll('.stat-grid .tt');
+    if(lbls[2])lbls[2].textContent='ลูกค้าประจำ (10+ ครั้ง)';
+    if(lbls[3])lbls[3].textContent='ยอดสะสมเฉลี่ย/คน';
+    const froms=document.querySelectorAll('.stat-grid .from');
+    if(froms[2])froms[2].textContent='มาบ่อย';
+    if(froms[3])froms[3].textContent='ทั้งร้าน';
+    wireCustStats(members,regular,avg);
+  }
+  window.cRender=render;
+
+  // การ์ดสถิติคลิกดูรายละเอียดได้ (ข้อมูลจริงจาก ALL)
+  function wireCustStats(members,regular,avg){
+    document.querySelectorAll('.stat-grid .stat').forEach(el=>el.onclick=null);
+    const plat=ALL.filter(c=>(c.totalSpent||0)>=100000).length, gold=ALL.filter(c=>(c.totalSpent||0)>=30000&&(c.totalSpent||0)<100000).length, normal=ALL.length-plat-gold;
+    const topSpend=ALL.slice().sort((a,b)=>(b.totalSpent||0)-(a.totalSpent||0)).slice(0,5);
+    const topVisit=ALL.slice().sort((a,b)=>(b.totalVisits||0)-(a.totalVisits||0)).slice(0,5);
+    BS.statDetails([
+      {title:'ลูกค้าทั้งหมด · '+fmt(ALL.length)+' ราย',sub:'แยกตามระดับสมาชิก',rows:[['Platinum (ยอด ≥ 100k)',fmt(plat)+' ราย','var(--brand-700)'],['Gold (ยอด ≥ 30k)',fmt(gold)+' ราย','#b9791a'],['ทั่วไป',fmt(normal)+' ราย']]},
+      {title:'สมาชิกคนสำคัญ · '+fmt(members)+' ราย',sub:'ยอดสะสม ≥ 30,000 ฿ · เรียงตามยอดสูงสุด',rows:topSpend.map(c=>[c.displayName,fmt(c.totalSpent||0)+' ฿',(c.totalSpent||0)>=100000?'var(--brand-700)':''])},
+      {title:'ลูกค้าประจำ · '+fmt(regular)+' ราย',sub:'มาใช้บริการ 10 ครั้งขึ้นไป · มาบ่อยสุด',rows:topVisit.map(c=>[c.displayName,(c.totalVisits||0)+' ครั้ง'])},
+      {title:'ยอดสะสมเฉลี่ย · '+fmt(avg)+' ฿/คน',sub:'ภาพรวมยอดใช้จ่าย',rows:[['ยอดสะสมรวมทั้งร้าน',fmt(ALL.reduce((s,c)=>s+(c.totalSpent||0),0))+' ฿','var(--brand-700)'],['ลูกค้าที่มียอดสะสม',fmt(ALL.filter(c=>(c.totalSpent||0)>0).length)+' ราย'],['ครั้งเข้าใช้เฉลี่ย',(ALL.length?Math.round(ALL.reduce((s,c)=>s+(c.totalVisits||0),0)/ALL.length):0)+' ครั้ง/คน']]},
+    ]);
+  }
+
+  async function load(){
+    try{ const r=await API.get('/customer?pageSize=500'); ALL=(r&&r.items)||[]; render(); }
+    catch(e){ console.error('customers',e); document.getElementById('cust-tbl').innerHTML='<tbody><tr><td style="text-align:center;color:var(--red);padding:30px">โหลดข้อมูลลูกค้าไม่สำเร็จ</td></tr></tbody>'; }
+  }
+  load();
+
+  // search + segment
+  const si=document.querySelector('.search input'); if(si)si.addEventListener('input',e=>{Q=e.target.value;render();});
+  document.querySelectorAll('.seg button').forEach((b,i)=>b.onclick=()=>{document.querySelectorAll('.seg button').forEach(x=>x.classList.remove('on'));b.classList.add('on');FILTER=['all','plat','gold','silver'][i];render();});
+
+  window.openDr=async function(id){
+    const c=ALL.find(x=>x.id===id)||{};
+    const t=tierOf(c.totalSpent||0);
+    document.getElementById('drawer').innerHTML=`
+      <div class="dr-head">
+        <button class="x" onclick="closeDr()">${svg('x')}</button>
+        <div class="flex ac g16">${av(c.displayName,62)}<div><div style="font-size:19px;font-weight:700">${c.displayName||''}</div>
+          <div style="opacity:.7;font-size:13px;margin:3px 0 7px">${c.phone||'—'}</div>
+          <span class="tier ${t[0]}">${svg('star')} ${t[1]}</span></div></div>
+      </div>
+      <div style="padding:20px">
+        <div class="grid-3" style="gap:12px;margin-bottom:20px">
+          <div class="minicard"><b>${c.totalVisits||0}</b><span>ครั้งที่มา</span></div>
+          <div class="minicard"><b>${fmt(c.totalSpent||0)}</b><span>ยอดสะสม (฿)</span></div>
+          <div class="minicard"><b>${relTime(c.lastVisitAt)}</b><span>มาล่าสุด</span></div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#f7d774,#e9b949);border-radius:13px;padding:11px 15px;margin-bottom:16px;color:#5c4500">
+          <div style="font-weight:600;font-size:13px">${svg('star')} แต้มสะสม</div>
+          <div style="font-weight:800;font-size:18px">${fmt(c.loyaltyPoints||0)} <span style="font-size:12px;font-weight:600">แต้ม</span></div>
+        </div>
+        <div class="flex g8" style="margin-bottom:20px">
+          <button class="btn btn-pri" style="flex:1" onclick="closeDr();BS.openBooking&&BS.openBooking()">${svg('plus')} จองคิว</button>
+          <button class="btn btn-ghost" onclick="reviewCustomer('${c.id}')">${svg('star')} รีวิว</button>
+          <button class="btn btn-ghost" onclick="editCustomer('${c.id}')">${svg('edit')}</button>
+          <button class="btn btn-ghost" onclick="delCustomer('${c.id}')">${svg('trash')}</button>
+        </div>
+        ${c.notes?`<div style="margin-bottom:18px;padding:14px;background:#fff8ec;border:1px solid #f0d9a8;border-radius:13px">
+          <div style="font-weight:600;margin-bottom:4px">หมายเหตุ / ข้อควรระวัง</div>
+          <div style="font-size:13px;color:var(--ink-2)">${c.notes}</div></div>`:''}
+        <div id="custPkg"></div>
+        <h3 style="font-size:15px;font-weight:600;margin-bottom:6px">ประวัติการใช้บริการล่าสุด</h3>
+        <div id="custHist"><div class="sub" style="padding:14px 0;font-size:12.5px;color:var(--ink-3)">กำลังโหลดประวัติ…</div></div>
+      </div>`;
+    document.getElementById('drbg').classList.add('show');
+    setTimeout(()=>document.getElementById('drawer').classList.add('show'),10);
+    // คอร์ส/แพ็กเกจคงเหลือของลูกค้า
+    try{ const pkgs=await API.get('/package/customer/'+id); const pe=document.getElementById('custPkg');
+      if(pe&&pkgs&&pkgs.length)pe.innerHTML='<h3 style="font-size:15px;font-weight:600;margin-bottom:6px">คอร์สคงเหลือ</h3>'+pkgs.map(p=>`<div style="margin-bottom:10px;padding:13px 15px;background:var(--brand-soft);border-radius:13px"><div class="flex ac jb"><div style="font-weight:600;color:var(--brand-700)">${svg('tag')} ${p.packageName}</div><span class="badge b-purple">เหลือ ${p.remainingSessions}/${p.totalSessions} ครั้ง</span></div>${p.expiresAt?`<div class="sub" style="font-size:11.5px;margin-top:4px">หมดอายุ ${API.fmtDate(p.expiresAt)}</div>`:''}</div>`).join('');
+    }catch(e){}
+    // ประวัติการใช้บริการจริงจากใบเสร็จ
+    try{ const hist=await API.get('/customer/'+id+'/history');
+      const el=document.getElementById('custHist'); if(el)el.innerHTML=(hist&&hist.length)?hist.map(h=>`
+        <div class="hist"><span class="hd"></span><div style="flex:1"><div style="font-weight:600;font-size:13.5px">${h.serviceName}${h.therapistName?' · '+h.therapistName:''}</div><div class="sub" style="font-size:12px">${API.fmtDate(h.date)} ${API.fmtTime(h.date)}${h.receiptNo?' · '+h.receiptNo:''}</div></div><b style="font-weight:600">${fmt(h.amount)} ฿</b></div>`).join('')
+        :'<div class="sub" style="padding:14px 0;font-size:12.5px;color:var(--ink-3)">ยังไม่มีประวัติการใช้บริการ</div>';
+    }catch(e){const el=document.getElementById('custHist');if(el)el.innerHTML='<div class="sub" style="padding:14px 0;font-size:12.5px;color:var(--ink-3)">โหลดประวัติไม่สำเร็จ</div>';}
+  };
+  window.closeDr=function(){
+    document.getElementById('drawer').classList.remove('show');
+    setTimeout(()=>document.getElementById('drbg').classList.remove('show'),260);
+  };
+
+  // ให้คะแนน/รีวิว — เลือกหมอนวด + ดาว + คอมเมนต์ → บันทึก DB จริง
+  let _rvStars=5;
+  window.reviewCustomer=async function(custId){
+    let ther=[];try{ther=await API.get('/therapist')||[];}catch(e){}
+    _rvStars=5;
+    const starRow=()=>[1,2,3,4,5].map(n=>`<span class="rv-star" data-n="${n}" onclick="window._setStars(${n})" style="font-size:30px;cursor:pointer;color:${n<=_rvStars?'#f0b429':'#dde0ea'}">★</span>`).join('');
+    BS.modal({title:'ให้คะแนนรีวิว',sub:'บันทึกความพึงพอใจของลูกค้า',w:420,
+      body:`<div class="field"><label>หมอนวด (ถ้ามี)</label><select id="rvTh"><option value="">— ให้คะแนนร้าน —</option>${ther.map(t=>`<option value="${t.id}">${t.displayName}</option>`).join('')}</select></div>
+        <div class="field"><label>คะแนน</label><div id="rvStars" style="display:flex;gap:4px">${starRow()}</div></div>
+        <div class="field"><label>ความคิดเห็น (ไม่บังคับ)</label><textarea id="rvComment" rows="2" placeholder="เช่น นวดดีมาก ประทับใจ"></textarea></div>`,
+      foot:`<button class="btn btn-ghost" onclick="BS.closeModal()">ยกเลิก</button><button class="btn btn-pri" onclick="window._saveReview('${custId}')">${svg('check')} บันทึกรีวิว</button>`});
+    window._setStars=(n)=>{_rvStars=n;document.getElementById('rvStars').innerHTML=starRow();};
+    window._saveReview=async(cid)=>{const th=document.getElementById('rvTh').value||null;const comment=document.getElementById('rvComment').value.trim()||null;
+      try{await API.post('/review',{customerId:cid,therapistId:th,paymentId:null,rating:_rvStars,comment});BS.closeModal();BS.toast('บันทึกรีวิว '+_rvStars+' ดาวแล้ว','star');}catch(e){BS.toast('บันทึกไม่สำเร็จ: '+e.message,'x');}};
+  };
+
+  function custForm(c){
+    c=c||{};
+    return `<div class="grid2"><div class="field"><label>ชื่อ - นามสกุล</label><input id="cf-name" value="${(c.displayName||'').replace(/"/g,'&quot;')}" placeholder="เช่น คุณสมหญิง ใจดี"></div>
+        <div class="field"><label>เบอร์โทรศัพท์</label><input id="cf-phone" value="${c.phone||''}" placeholder="08x-xxx-xxxx"></div></div>
+      <div class="field"><label>หมายเหตุ / ข้อควรระวัง</label><textarea id="cf-notes" rows="2" placeholder="เช่น แพ้น้ำมันหอม, ชอบน้ำหนักมือเบา">${c.notes||''}</textarea></div>`;
+  }
+  async function saveCustomer(id){
+    const name=document.getElementById('cf-name').value.trim();
+    if(!name){BS.toast('กรุณากรอกชื่อ','x');return;}
+    const body={displayName:name,phone:document.getElementById('cf-phone').value.trim()||null,notes:document.getElementById('cf-notes').value.trim()||null};
+    try{ if(id)await API.put('/customer/'+id,body); else await API.post('/customer',body);
+      BS.closeModal();BS.toast(id?'แก้ไขลูกค้าเรียบร้อย':'เพิ่มลูกค้าใหม่เรียบร้อย');closeDr();await load();
+    }catch(e){BS.toast('บันทึกไม่สำเร็จ: '+e.message,'x');}
+  }
+  window.addCustomer=function(){
+    BS.modal({title:'เพิ่มลูกค้าใหม่',sub:'บันทึกข้อมูลลูกค้าเข้าสู่ฐานข้อมูลร้าน',w:520,body:custForm(),
+      foot:`<button class="btn btn-ghost" onclick="BS.closeModal()">ยกเลิก</button><button class="btn btn-pri" onclick="window._saveC()">${svg('check')} บันทึกลูกค้า</button>`});
+    window._saveC=()=>saveCustomer(null);
+  };
+  window.editCustomer=function(id){
+    const c=ALL.find(x=>x.id===id)||{};
+    BS.modal({title:'แก้ไขข้อมูลลูกค้า',sub:c.displayName||'',w:520,body:custForm(c),
+      foot:`<button class="btn btn-ghost" onclick="BS.closeModal()">ยกเลิก</button><button class="btn btn-pri" onclick="window._saveC()">${svg('check')} บันทึกการแก้ไข</button>`});
+    window._saveC=()=>saveCustomer(id);
+  };
+  window.delCustomer=function(id){
+    const c=ALL.find(x=>x.id===id)||{};
+    BS.modal({title:'ลบลูกค้า',sub:c.displayName||'',w:400,body:'<div style="padding:6px 0;color:var(--ink-2)">ต้องการลบลูกค้ารายนี้ออกจากระบบหรือไม่?</div>',
+      foot:`<button class="btn btn-ghost" onclick="BS.closeModal()">ยกเลิก</button><button class="btn btn-pri" style="background:var(--red)" onclick="window._delC()">${svg('trash')} ลบ</button>`});
+    window._delC=async()=>{try{await API.del('/customer/'+id);BS.closeModal();BS.toast('ลบลูกค้าแล้ว');closeDr();await load();}catch(e){BS.toast('ลบไม่สำเร็จ','x');}};
+  };
+};
+</script>
+<script src="../assets/api.js?v=2"></script>
+<script src="../assets/shell.js?v=8"></script>
+</body>
+</html>

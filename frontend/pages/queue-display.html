@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 21c-4.5 0-8-2.6-8-6 0 0 2.4.4 4 1.6C10.7 11.7 12 9 12 9s1.3 2.7 4 7.6c1.6-1.2 4-1.6 4-1.6 0 3.4-3.5 6-8 6Z' fill='%236c5ce7'/></svg>">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JavaXd · จอเรียกคิว</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============ จอเรียกคิวหน้าร้าน (Customer Display) ============
+   เปิดหน้านี้บนทีวี/แท็บเล็ตที่ตั้งให้ลูกค้าเห็น (กด F11 = เต็มจอ)
+   TODO(Backend): subscribe WebSocket /queue/live เพื่ออัปเดตเรียลไทม์
+   เลขคิวรายวัน A001-Z999 รีเซ็ตทุกเช้า · DB เก็บ UUID + เลขคิวแสดงผล */
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'IBM Plex Sans Thai',sans-serif;background:#13172b;color:#fff;min-height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.top{display:flex;align-items:center;gap:16px;padding:26px 44px}
+.mark{width:52px;height:52px;border-radius:15px;background:linear-gradient(135deg,#7b6bf0,#6c5ce7);display:grid;place-items:center;box-shadow:0 8px 24px rgba(108,92,231,.5)}
+.mark svg{width:30px;height:30px;color:#fff}
+.top h1{font-size:clamp(18px,2.4vw,26px);font-weight:700}
+.top .sub{font-size:14px;color:#8d93b8}
+.clock{margin-left:auto;text-align:right}
+.clock .t{font-size:34px;font-weight:700;font-variant-numeric:tabular-nums}
+.clock .d{font-size:14px;color:#8d93b8}
+.stage{flex:1;display:grid;grid-template-columns:1.25fr 1fr;gap:34px;padding:10px 44px 40px;min-height:0}
+.calling{background:linear-gradient(150deg,#2a2456,#3b2f7a 60%,#4a3aa8);border-radius:30px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;position:relative;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.4)}
+.calling::after{content:'';position:absolute;width:420px;height:420px;border-radius:50%;background:rgba(255,255,255,.06);top:-160px;right:-140px}
+.calling .lb{font-size:24px;font-weight:600;color:#c9c1ff;letter-spacing:.06em;margin-bottom:10px}
+.calling .qno{font-size:clamp(84px,16vw,170px);font-weight:800;line-height:1;letter-spacing:.02em;text-shadow:0 14px 40px rgba(0,0,0,.35);animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+@media (prefers-reduced-motion: reduce){.calling .qno{animation:none}}
+.calling .who{margin-top:18px;font-size:26px;font-weight:600}
+.calling .room{margin-top:8px;font-size:19px;color:#c9c1ff}
+.calling .room b{color:#fff;font-weight:700}
+.next{display:flex;flex-direction:column;min-height:0}
+.next h2{font-size:20px;font-weight:700;color:#aab0d6;margin-bottom:16px;display:flex;align-items:center;gap:10px}
+.next h2 .d{width:10px;height:10px;border-radius:50%;background:#f5a623}
+.nq{flex:1;display:flex;flex-direction:column;gap:13px;overflow:hidden}
+.nq .it{background:#1c2138;border:1px solid #2b3252;border-radius:18px;padding:18px 24px;display:flex;align-items:center;gap:18px}
+.nq .no{font-size:34px;font-weight:800;color:#9d8ff5;width:110px;letter-spacing:.02em;font-variant-numeric:tabular-nums}
+.nq .sv{font-size:16.5px;font-weight:600}
+.nq .mt{font-size:13px;color:#8d93b8;margin-top:2px}
+.nq .eta{margin-left:auto;text-align:right;font-size:13px;color:#8d93b8}
+.nq .eta b{display:block;font-size:18px;color:#f5c06a;font-weight:700}
+.foot{background:#0e1122;padding:16px 0;overflow:hidden;white-space:nowrap}
+.foot .roll{display:inline-block;animation:roll 26s linear infinite;font-size:16px;color:#aab0d6}
+.foot .roll b{color:#7ee2b0}
+@keyframes roll{0%{transform:translateX(100vw)}100%{transform:translateX(-100%)}}
+@media (prefers-reduced-motion: reduce){.foot .roll{animation:none}}
+@media(max-width:820px){.stage{grid-template-columns:1fr;overflow-y:auto}.calling{min-height:330px}.top{padding:18px 22px}.stage{padding:8px 22px 24px}}
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="mark"><svg viewBox="0 0 24 24"><path d="M12 21c-4.5 0-8-2.6-8-6 0 0 2.4.4 4 1.6C10.7 11.7 12 9 12 9s1.3 2.7 4 7.6c1.6-1.2 4-1.6 4-1.6 0 3.4-3.5 6-8 6Z" fill="currentColor"></path><path d="M12 18c-2 0-3.6-1.6-3.6-4 0-2 1.6-4.5 3.6-6 2 1.5 3.6 4 3.6 6 0 2.4-1.6 4-3.6 4Z" fill="currentColor" opacity=".55"></path></svg></div>
+    <div><h1>JavaXd Massage &amp; Spa</h1><div class="sub">ระบบเรียกคิวอัตโนมัติ · กรุณารอเรียกหมายเลขของท่าน</div></div>
+    <div class="clock"><div class="t" id="clk">--:--</div><div class="d" id="dt"></div></div>
+  </div>
+
+  <div class="stage">
+    <div class="calling">
+      <div class="lb">กำลังเรียกคิว</div>
+      <div class="qno" id="qno">A006</div>
+      <div class="who" id="qwho">คุณดารา</div>
+      <div class="room" id="qroom">เชิญที่ <b>ห้อง 3 · หมอนวดปลา</b></div>
+    </div>
+    <div class="next">
+      <h2><span class="d"></span>คิวถัดไป</h2>
+      <div class="nq" id="nq"></div>
+    </div>
+  </div>
+
+  <div class="foot"><span class="roll">ยินดีต้อนรับสู่ JavaXd Massage &amp; Spa 🌿 วันนี้ให้บริการแล้ว <b>15 คิว</b> · โปรโมชันเดือนนี้: นวดไทย 1 แถม 1 ทุกวันอังคาร · สมัครสมาชิกสะสมแต้ม รับส่วนลด 10% ทันที · สอบถามเพิ่มเติมที่เคาน์เตอร์ หรือ Line: @tharin</span></div>
+
+<script>
+/* นาฬิกาเรียลไทม์ */
+function clk(){
+  const n=new Date();
+  document.getElementById('clk').textContent=n.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('dt').textContent=n.toLocaleDateString('th-TH',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+}
+clk();setInterval(clk,15000);
+
+/* คิวจริงจาก API — โหลดทุก 8 วิ (เปิดจากเครื่องที่ล็อกอินแล้ว ใช้ token ใน localStorage) */
+const API_BASE=location.origin + '/api';
+const TOKEN=localStorage.getItem('th_token')||'';
+async function loadQueue(){
+  try{
+    const res=await fetch(API_BASE+'/queue',{headers:{Authorization:'Bearer '+TOKEN}});
+    if(!res.ok)throw new Error('http '+res.status);
+    const d=await res.json();
+    const inSv=d.inService||[], waiting=d.waiting||[];
+    // กำลังเรียก = คิวที่กำลังให้บริการคิวแรก (ถ้าไม่มี ใช้คิวรอคิวแรก)
+    const calling=inSv[0]||waiting[0];
+    if(calling){
+      document.getElementById('qno').textContent=calling.queueNo||'-';
+      document.getElementById('qwho').textContent=(calling.customer&&calling.customer.displayName)||'ลูกค้า';
+      const th=(calling.therapists&&calling.therapists[0]&&calling.therapists[0].displayName);
+      document.getElementById('qroom').innerHTML=inSv[0]?('กำลังรับบริการ'+(th?' · <b>หมอนวด'+th+'</b>':'')):'<b>กรุณาเตรียมตัว เชิญที่เคาน์เตอร์</b>';
+    } else {
+      document.getElementById('qno').textContent='—';
+      document.getElementById('qwho').textContent='ไม่มีคิว';
+      document.getElementById('qroom').innerHTML='<b>ขณะนี้ไม่มีคิวรอ</b>';
+    }
+    // คิวถัดไป = รายการรอ
+    const next=(inSv[0]?waiting:waiting.slice(1)).slice(0,4);
+    document.getElementById('nq').innerHTML=next.length?next.map(q=>{
+      const svc=(q.services&&q.services[0])||'บริการ';
+      const eta=q.estimatedWaitMins!=null?('~'+q.estimatedWaitMins+' นาที'):'รอเรียก';
+      return `<div class="it"><span class="no">${q.queueNo||'-'}</span>
+        <div><div class="sv">${(q.customer&&q.customer.displayName)||'ลูกค้า'}</div><div class="mt">${svc}</div></div>
+        <div class="eta">รออีก<b>${eta}</b></div></div>`;}).join(''):'<div style="color:#8d93b8;padding:20px;text-align:center">ไม่มีคิวรอถัดไป</div>';
+    // footer count
+    const roll=document.querySelector('.foot .roll b');if(roll)roll.textContent=((d.summary&&d.summary.inServiceCount)||0)+' คิวกำลังบริการ · รอ '+((d.summary&&d.summary.waitingCount)||0);
+  }catch(e){
+    document.getElementById('qwho').textContent='เชื่อมต่อระบบไม่ได้';
+    document.getElementById('qroom').innerHTML='<b>กรุณาล็อกอินที่เครื่องนี้ก่อนเปิดจอคิว</b>';
+  }
+}
+loadQueue();setInterval(loadQueue,8000);
+</script>
+</body>
+</html>

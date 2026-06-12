@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 21c-4.5 0-8-2.6-8-6 0 0 2.4.4 4 1.6C10.7 11.7 12 9 12 9s1.3 2.7 4 7.6c1.6-1.2 4-1.6 4-1.6 0 3.4-3.5 6-8 6Z' fill='%236c5ce7'/></svg>">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JavaXd · การจอง &amp; คิวงาน</title>
+<link rel="stylesheet" href="../assets/theme.css?v=1">
+<style>
+.tabs{display:flex;gap:4px;background:#eef0f6;padding:4px;border-radius:13px;width:max-content;margin-bottom:20px}
+.tabs button{padding:9px 18px;border-radius:10px;font-size:13.5px;font-weight:600;color:var(--ink-2)}
+.tabs button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.pane{display:none}.pane.on{display:block}
+.toolbar{display:flex;gap:10px;align-items:center;margin-bottom:18px;flex-wrap:wrap}
+.kanban{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+@media(max-width:1200px){.kanban{grid-template-columns:repeat(2,1fr)}}
+.kcol{background:#fff;border-radius:16px;border:1px solid var(--line);box-shadow:var(--shadow);display:flex;flex-direction:column;max-height:760px}
+.kcol-h{padding:15px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:9px;font-weight:600}
+.kcol-h .cnt{margin-left:auto;background:#eef0f6;color:var(--ink-2);font-size:12px;font-weight:700;padding:2px 9px;border-radius:20px}
+.kcol-b{padding:12px;display:flex;flex-direction:column;gap:11px;overflow-y:auto}
+.kcard{border:1px solid var(--line);border-radius:13px;padding:13px;background:var(--card-2);cursor:grab;transition:.12s}
+.kcard:hover{box-shadow:var(--shadow-lg);transform:translateY(-2px);border-color:var(--brand-soft)}
+.kcard .top{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.kcard .nm{font-weight:600;font-size:13.5px}
+.kcard .meta{font-size:12px;color:var(--ink-3)}
+.kcard .svc{display:flex;align-items:center;justify-content:space-between;font-size:12.5px;margin-top:9px;padding-top:9px;border-top:1px dashed var(--line-2)}
+.bk-steps{display:flex;margin:6px 0 20px}
+.bk-step{flex:1;text-align:center;position:relative;font-size:11.5px;color:var(--ink-3)}
+.bk-step .dot{width:30px;height:30px;border-radius:50%;background:#eef0f6;color:var(--ink-3);display:grid;place-items:center;margin:0 auto 6px;font-weight:700;font-size:12px;position:relative;z-index:2}
+.bk-step .dot svg{width:15px;height:15px}
+.bk-step::before{content:'';position:absolute;top:15px;left:-50%;width:100%;height:2px;background:#eceef5;z-index:1}
+.bk-step:first-child::before{display:none}
+.bk-step.done .dot{background:var(--green);color:#fff}
+.bk-step.done::before{background:var(--green)}
+.bk-step.now .dot{background:var(--brand);color:#fff;box-shadow:0 0 0 4px var(--brand-soft)}
+.bk-step.now{color:var(--brand-700);font-weight:600}
+.bk-info{display:grid;grid-template-columns:1fr 1fr;gap:14px;background:var(--card-2);border:1px solid var(--line);border-radius:13px;padding:15px;margin-bottom:16px}
+.bk-info .it span{font-size:11px;color:var(--ink-3);display:block;margin-bottom:2px}
+.bk-info .it b{font-weight:600;font-size:13.5px}
+</style>
+</head>
+<body data-title="การจอง &amp; คิวงาน">
+
+<template id="page">
+  <div class="page-h">
+    <div class="ttl"><h2>การจอง &amp; คิวงาน</h2><p>จัดการรายการจองทั้งหมด ติดตามคิวแบบเรียลไทม์</p></div>
+    <div class="sp">
+      <a class="btn btn-ghost" href="queue-display.html" target="_blank" data-i="screen">จอเรียกคิว (TV)</a>
+      <button class="btn btn-ghost" onclick="bkExport()" data-i="down">ส่งออก</button>
+      <button class="btn btn-pri" onclick="BS.openBooking()" data-i="plus">สร้างการจอง</button>
+    </div>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat" style="cursor:pointer" onclick="statList('all')"><div class="row1"><div class="ic ic-blue" data-i="cal"></div><span class="tt">การจองวันนี้</span></div><div class="val">27</div><div class="row3"><span class="from">ทั้งหมดวันนี้ · กดดู</span></div></div>
+    <div class="stat" style="cursor:pointer" onclick="statList('รอคิว')"><div class="row1"><div class="ic ic-orange" data-i="clock"></div><span class="tt">คิวรอวันนี้</span></div><div class="val">5</div><div class="row3"><span class="from">walk-in ในคิว · กดดูคิวงาน</span></div></div>
+    <div class="stat" style="cursor:pointer" onclick="statList('กำลังให้บริการ')"><div class="row1"><div class="ic ic-purple" data-i="spa"></div><span class="tt">กำลังให้บริการ</span></div><div class="val">7</div><div class="row3"><span class="from">บนเตียงตอนนี้ · กดดูคิวงาน</span></div></div>
+    <div class="stat" style="cursor:pointer" onclick="statList('เสร็จสิ้น')"><div class="row1"><div class="ic ic-green" data-i="check"></div><span class="tt">จบงานวันนี้</span></div><div class="val">15</div><div class="row3"><span class="from">คิวที่จบแล้ว · กดดูคิวงาน</span></div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="on" data-tab="list">รายการจอง</button>
+    <button data-tab="queue">คิวงาน (เรียลไทม์)</button>
+  </div>
+
+  <!-- LIST -->
+  <div class="pane on" id="pane-list">
+    <div class="card card-pad">
+      <div class="toolbar">
+        <div class="search" style="max-width:300px;flex:0 0 300px"><input placeholder="ค้นหาชื่อ / เบอร์โทร"></div>
+        <div class="seg"><button class="on">ทั้งหมด</button><button>วันนี้</button><button>พรุ่งนี้</button></div>
+        <button class="btn btn-ghost btn-sm" data-i2="filter" onclick="filterBy('สถานะ',['รอดำเนินการ','กำลังให้บริการ','เสร็จสิ้น','ยกเลิก'])">สถานะ</button>
+        <button class="btn btn-ghost btn-sm" data-i2="filter" onclick="filterBy('หมอนวด',['อ้อม','นุ่น','ใบเตย','ปลา','ฟ้า'])">หมอนวด</button>
+        <span class="mla muted" style="font-size:13px">กำลังโหลด...</span>
+      </div>
+      <table class="tbl" id="bk-tbl"></table>
+    </div>
+  </div>
+
+  <!-- QUEUE -->
+  <div class="pane" id="pane-queue">
+    <div class="kanban" id="kanban"></div>
+  </div>
+</template>
+
+<script>window.BASE='../';window.PAGE='bookings';</script>
+<script>if(!localStorage.getItem('th_auth'))location.href=(window.BASE||'')+'login.html';</script>
+<script>
+window.PAGE_INIT=function(){
+  document.querySelectorAll('[data-i]').forEach(e=>{const t=e.textContent.trim();e.innerHTML=svg(e.dataset.i)+(t?'<span>'+t+'</span>':'')});
+  document.querySelectorAll('[data-i2]').forEach(e=>e.insertAdjacentHTML('afterbegin',svg(e.dataset.i2)));
+
+  const today=(d=>new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10))(new Date());
+  const BSTAT=[['รอดำเนินการ','b-orange'],['ยืนยันแล้ว','b-blue'],['กำลังให้บริการ','b-purple'],['เสร็จสิ้น','b-green'],['ยกเลิก','b-gray'],['ไม่มาตามนัด','b-gray']];
+  let BK=[]; let Q='';
+  window.getBK=()=>BK;
+
+  let STAT_FILTER=null; // Set ของ status index ที่เลือก
+  let PAGE_N=1; const PER_PAGE=10; let TH_FILTER=null; // ฟิลเตอร์หมอนวดจริง (Set ของ therapistId)
+  window._bkPage=function(n){PAGE_N=n;renderTable();};
+  function renderTable(){
+    let list=BK.slice();
+    if(Q){const q=Q.toLowerCase();list=list.filter(b=>((b.customer&&b.customer.displayName)||'').toLowerCase().includes(q)||((b.customer&&b.customer.phone)||'').includes(Q));}
+    if(STAT_FILTER)list=list.filter(b=>STAT_FILTER.has(b.status));
+    if(TH_FILTER)list=list.filter(b=>(b.items||[]).some(it=>it.therapistId&&TH_FILTER.has(it.therapistId)));
+    // เรียง: วันที่+เวลา ใกล้สุดก่อน
+    list.sort((a,b)=>((a.bookingDate||'')+(a.startTime||'')).localeCompare((b.bookingDate||'')+(b.startTime||'')));
+    const totalPages=Math.max(1,Math.ceil(list.length/PER_PAGE));
+    if(PAGE_N>totalPages)PAGE_N=totalPages;
+    const pageList=list.slice((PAGE_N-1)*PER_PAGE,PAGE_N*PER_PAGE);
+    const cnt=document.querySelector('.mla.muted');if(cnt)cnt.textContent='แสดง '+pageList.length+' จาก '+list.length+' รายการ';
+    const pager=totalPages>1?`<tr><td colspan="7" style="text-align:center;padding:12px"><div style="display:inline-flex;gap:6px;align-items:center">
+      <button class="btn btn-ghost btn-sm" ${PAGE_N<=1?'disabled style="opacity:.4"':''} onclick="event.stopPropagation();_bkPage(${PAGE_N-1})">← ก่อนหน้า</button>
+      <span style="font-size:12.5px;color:var(--ink-2);padding:0 8px">หน้า ${PAGE_N} / ${totalPages}</span>
+      <button class="btn btn-ghost btn-sm" ${PAGE_N>=totalPages?'disabled style="opacity:.4"':''} onclick="event.stopPropagation();_bkPage(${PAGE_N+1})">ถัดไป →</button></div></td></tr>`:'';
+    document.getElementById('bk-tbl').innerHTML=
+      '<thead><tr><th>รหัส</th><th>ลูกค้า</th><th>บริการ</th><th>วันที่ · เวลานัด</th><th>สถานะ</th><th style="text-align:right">ยอด (บาท)</th><th></th></tr></thead><tbody>'+
+      (pageList.length?pageList.map(b=>{const st=BSTAT[b.status]||['?','b-gray'];const nm=(b.customer&&b.customer.displayName)||'-';return `<tr style="cursor:pointer" onclick="if(!event.target.closest('.row-act'))showBk('${b.id}')">
+        <td><b style="font-weight:600">${b.bookingNo||'—'}</b></td>
+        <td><div class="cell-u">${av(nm,36)}<div><div class="nm">${nm}</div><div class="sub">${(b.customer&&b.customer.phone)||''}</div></div></div></td>
+        <td>${b.itemCount||0} บริการ<div class="sub">${b.totalDurationMins||0} นาที</div></td>
+        <td>${b.bookingDate===today?'วันนี้':b.bookingDate===tomorrow?'พรุ่งนี้':(b.bookingDate||'').slice(5)} · ${(b.startTime||'').slice(0,5)}</td>
+        <td><span class="badge ${st[1]}">${st[0]}</span>${b.status===3?(b.paid?'<div style="margin-top:3px"><span class="badge b-green" style="font-size:10.5px">✓ ชำระแล้ว</span></div>':`<div style="margin-top:3px"><span class="badge b-orange" style="font-size:10.5px;cursor:pointer" onclick="event.stopPropagation();location.href='pos.html?walkin=${b.walkInId||''}'">⚠ รอชำระ · กดเก็บเงิน</span></div>`):''}</td>
+        <td style="text-align:right;font-weight:600">${b.totalAmount?fmt(b.totalAmount):'—'}</td>
+        <td><div class="row-act"><button data-i="eye" onclick="showBk('${b.id}')"></button></div></td>
+      </tr>`}).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--ink-3);padding:30px">ไม่มีการจองตามเงื่อนไข</td></tr>')+pager+'</tbody>';
+    document.querySelectorAll('#bk-tbl [data-i]').forEach(e=>e.innerHTML=svg(e.dataset.i));
+  }
+  window.bkRenderTable=renderTable;
+
+  let DATE_MODE='all'; // all | today | tomorrow — ปุ่ม seg ต้องกรองจริง
+  const tomorrow=new Date(Date.now()+864e5).toISOString().slice(0,10);
+  async function loadBookings(){
+    try{ const d=DATE_MODE==='today'?today:DATE_MODE==='tomorrow'?tomorrow:'';
+      const r=await API.get('/booking?pageSize=500'+(d?('&date='+d):'')); BK=(r&&r.items)||[]; PAGE_N=1; renderTable(); }
+    catch(e){console.error('bookings',e);document.getElementById('bk-tbl').innerHTML='<tbody><tr><td style="text-align:center;color:var(--red);padding:30px">โหลดการจองไม่สำเร็จ</td></tr></tbody>';}
+  }
+  loadBookings();
+  const si=document.querySelector('.toolbar .search input');if(si)si.addEventListener('input',e=>{Q=e.target.value;PAGE_N=1;renderTable();});
+  // ปุ่มช่วงวัน — กรองจริง ไม่ใช่แค่สลับสี
+  document.querySelectorAll('.toolbar .seg button').forEach((b,i)=>b.onclick=()=>{
+    document.querySelectorAll('.toolbar .seg button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+    DATE_MODE=['all','today','tomorrow'][i];loadBookings();
+  });
+
+  // stat cards จาก /dashboard
+  (async()=>{try{const d=await API.get('/dashboard');const v=document.querySelectorAll('.stat-grid .val');
+    if(v[0])v[0].textContent=d.bookings.total;if(v[1])v[1].textContent=d.queue.waiting;if(v[2])v[2].textContent=d.queue.inService;if(v[3])v[3].textContent=d.queue.completed;
+  }catch(e){}})();
+
+  // ===== kanban: คิวงานจริง จาก walk-in วันนี้ =====
+  async function loadKanban(){
+    try{
+      const r=await API.get('/walk-in?date='+today+'&pageSize=100');
+      const items=(r&&r.items)||[];
+      const groups={0:[],1:[],2:[]}; // Waiting, InService, Completed
+      items.forEach(w=>{if(groups[w.status])groups[w.status].push(w);});
+      // นัดที่ "ถึงเวลาแล้ว" แต่ยังไม่เช็คอินเป็นคิว — ต้องเห็นที่นี่จนกว่าจะจัดการ (เช็คอิน/no-show)
+      // เทียบทั้งวันที่+เวลา → นัดค้างของเมื่อวานไม่หายตอนข้ามเที่ยงคืน
+      let dueBk=[];
+      try{const br=await API.get('/booking?pageSize=300');
+        const nowDT=new Date();const todayNow=nowDT.toISOString().slice(0,10);const nowHM=nowDT.toTimeString().slice(0,5);
+        dueBk=((br&&br.items)||[]).filter(b=>!b.checkedIn&&(b.status===0||b.status===1)&&
+          ((b.bookingDate<todayNow)||(b.bookingDate===todayNow&&(b.startTime||'').slice(0,5)<=nowHM)));
+      }catch(e){}
+      const dueCol=`<div class="kcol" style="border-color:${dueBk.length?'#ef5d6b':'var(--line)'}">
+        <div class="kcol-h"><span class="d" style="width:9px;height:9px;border-radius:50%;background:#ef5d6b"></span>นัดถึงเวลา · รอเช็คอิน<span class="cnt"${dueBk.length?' style="background:#fdecee;color:#d33c50"':''}>${dueBk.length}</span></div>
+        <div class="kcol-b">${dueBk.length?dueBk.map(b=>{const nm=(b.customer&&b.customer.displayName)||'ลูกค้า';return `
+          <div class="kcard" style="border-color:#f4ccd0">
+            <div class="top">${av(nm,36)}<div><div class="nm">${nm}</div><div class="meta">นัด ${(b.startTime||'').slice(0,5)} น. · ${b.bookingNo||''}</div></div></div>
+            <div class="meta">${b.itemCount||0} บริการ${b.totalAmount?' · '+fmt(b.totalAmount)+' ฿':''}</div>
+            <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-pri btn-sm" onclick="window._bkCheckin('${b.id}')">✓ มาแล้ว — เข้าคิว</button><button class="btn btn-ghost btn-sm" style="color:var(--red);border-color:#f4ccd0" onclick="window._bkNoShow('${b.id}')">✗ ไม่มาตามนัด</button></div>
+          </div>`}).join(''):'<div style="color:var(--ink-3);font-size:12.5px;padding:14px;text-align:center">ไม่มีนัดค้างเช็คอิน 👍</div>'}</div></div>`;
+      const cols=[
+        {t:'รอคิว',c:'#f5a623',st:0,act:'start'},
+        {t:'กำลังให้บริการ',c:'#8b7cf0',st:1,act:'pay'},
+        {t:'เสร็จสิ้น',c:'#22b07d',st:2,act:'done'},
+      ];
+      document.getElementById('kanban').style.gridTemplateColumns='repeat(4,1fr)';
+      document.getElementById('kanban').innerHTML=dueCol+cols.map(col=>`
+        <div class="kcol" data-st="${col.st}" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="window._kDrop(event,${col.st})">
+          <div class="kcol-h"><span class="d" style="width:9px;height:9px;border-radius:50%;background:${col.c}"></span>${col.t}<span class="cnt">${groups[col.st].length}</span></div>
+          <div class="kcol-b">${groups[col.st].length?groups[col.st].map(w=>{const nm=(w.customer&&w.customer.displayName)||'ลูกค้า';
+            // คิวรอ: บอกชัดว่าเรียกได้เลย (มีหมอว่างที่ทำบริการนี้ได้) หรือใครใกล้ว่างสุด
+            let hint='';const a=w.assign;
+            if(col.st===0&&a){
+              if(a.callable)hint=`<div style="margin-top:7px"><span class="badge b-green">▶ เรียกคิวได้เลย · ${a.suggested.displayName} ว่าง</span></div>`;
+              else if(a.nextFree)hint=`<div style="margin-top:7px"><span class="badge b-orange">รอ ${a.nextFree.displayName} ว่าง ~${a.nextFree.freeAt} น.</span></div>`;
+              else hint=`<div style="margin-top:7px"><span class="badge b-gray">ยังไม่มีหมอที่ทำบริการนี้</span></div>`;
+            }
+            return `
+            <div class="kcard" draggable="true" data-id="${w.id}" data-st="${col.st}" ${col.st===0&&a&&a.callable?'style="border-color:#22b07d;background:#f2fbf7"':''} ondragstart="event.dataTransfer.setData('text/plain','${w.id}|${col.st}')" onclick="showQ('${w.id}',${col.st})">
+              <div class="top">${av(nm,36)}<div><div class="nm">${nm}</div><div class="meta">${API.fmtTime(w.arrivalTime)||''}</div></div><span class="badge b-purple" style="margin-left:auto;letter-spacing:.04em">${w.queueNo||''}</span></div>
+              <div class="meta">${w.itemCount||0} บริการ${w.totalAmount?' · '+fmt(w.totalAmount)+' ฿':''} ${col.st===2?(w.paid?'<span class="badge b-green" style="margin-left:4px">✓ ชำระแล้ว</span>':'<span class="badge b-orange" style="margin-left:4px">รอชำระ</span>'):''}</div>${hint}
+            </div>`}).join(''):'<div style="color:var(--ink-3);font-size:12.5px;padding:14px;text-align:center">ว่าง</div>'}</div>
+        </div>`).join('');
+    }catch(e){console.error('kanban',e);}
+  }
+  loadKanban();window.loadKanban=loadKanban;
+  // ไม่มาตามนัด — จบที่การ์ดเดียว ไม่ต้องสลับหน้า (หลัก UX ของ Tharin)
+  window._bkNoShow=async function(id){
+    if(!confirm('ยืนยันว่าลูกค้าไม่มาตามนัด?'))return;
+    try{await API.patch('/booking/'+id+'/no-show');BS.toast('บันทึก "ไม่มาตามนัด" แล้ว','x');await loadKanban();await loadBookings();}
+    catch(e){BS.toast('ไม่สำเร็จ: '+e.message,'x');}
+  };
+  // เช็คอินนัด → กลายเป็นคิวจริง (โฟลว์เดียวกับ Front Desk)
+  window._bkCheckin=async function(id){
+    try{
+      const b=await API.get('/booking/'+id);
+      const customerId=(b.customer&&b.customer.id)||b.customerId;
+      await API.post('/walk-in',{customerId,bookingId:b.id,items:(b.items||[]).map((it,i)=>({serviceId:(it.service&&it.service.id)||it.serviceId,therapistId:(it.therapist&&it.therapist.id)||it.therapistId||null,roomId:null,sortOrder:i})),notes:'เช็คอินจากนัดหมาย'});
+      BS.toast('เช็คอิน '+((b.customer&&b.customer.displayName)||'ลูกค้า')+' เข้าคิวแล้ว','flow');
+      await loadKanban();await loadBookings();
+    }catch(e){BS.toast('เช็คอินไม่สำเร็จ: '+e.message,'x');}
+  };
+  // realtime: รีโหลดรายการ+คิว เมื่อมีการเปลี่ยนแปลงจากผู้ใช้อื่น
+  if(window.RT)RT.onUpdate(function(){clearTimeout(window._bkRt);window._bkRt=setTimeout(function(){loadBookings();loadKanban();},700);});
+
+  // ลากการ์ดคิวข้ามคอลัมน์ → เปลี่ยนสถานะจริง (start/complete)
+  (function(){const s=document.createElement('style');s.textContent='.kcol.drag-over{outline:2px dashed var(--brand);outline-offset:-3px;background:var(--brand-soft)}.kcard[draggable]{cursor:grab}';document.head.appendChild(s);})();
+  window._kDrop=async function(e,targetSt){
+    e.preventDefault();
+    document.querySelectorAll('.kcol.drag-over').forEach(c=>c.classList.remove('drag-over'));
+    const parts=(e.dataTransfer.getData('text/plain')||'').split('|');
+    const id=parts[0], srcSt=+parts[1];
+    if(!id||srcSt===targetSt)return;
+    if(targetSt<srcSt){BS.toast('ย้อนสถานะคิวไม่ได้','x');return;}
+    try{
+      if(srcSt===0 && targetSt>=1){
+        // ต้องมีหมอนวดที่ทำได้+ว่างก่อนเริ่ม → assign ให้อัตโนมัติ (คนแรกที่ตรง)
+        const w=await API.get('/walk-in/'+id);
+        const serviceIds=[...new Set((w.items||[]).map(it=>it.service&&it.service.id).filter(Boolean))];
+        const qs=serviceIds.map(s=>'serviceIds='+s).join('&');const map=await API.get('/walk-in/available-therapists?'+qs);
+        const lists=serviceIds.map(s=>(map[s]||[]));const avail=lists.length?lists[0].filter(t=>lists.every(l=>l.some(x=>x.id===t.id))):[];
+        if(!avail.length){BS.toast('ไม่มีหมอนวดที่ทำบริการนี้ได้และว่าง · เปิดการ์ดเพื่อจัดการ','x');loadKanban();return;}
+        await API.patch('/walk-in/'+id+'/assign',{therapistId:avail[0].id,roomId:null});
+        await API.patch('/walk-in/'+id+'/start');
+        BS.toast('ย้าย → กำลังให้บริการ · มอบหมาย '+avail[0].displayName);
+      }
+      if(targetSt>=2)await API.patch('/walk-in/'+id+'/complete');
+      if(targetSt>=2&&srcSt>=1)BS.toast('ย้ายคิว → เสร็จสิ้น แล้ว');
+      loadKanban();loadBookings();
+    }catch(err){BS.toast('เปลี่ยนสถานะไม่สำเร็จ: '+err.message,'x');loadKanban();}
+  };
+
+  // tabs
+  // tabs (อิง hash → เมนูย่อย sidebar สลับแท็บได้แม้อยู่หน้านี้แล้ว)
+  function setTab(k){
+    document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x.dataset.tab===k));
+    document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));
+    document.getElementById('pane-'+k).classList.add('on');
+  }
+  document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
+    setTab(b.dataset.tab);
+    history.replaceState(null,'',b.dataset.tab==='queue'?'#queue':location.pathname.split('/').pop());
+  });
+  if(location.hash==='#queue')setTab('queue');
+  window.addEventListener('hashchange',()=>setTab(location.hash==='#queue'?'queue':'list'));
+
+  // ---- booking detail modal (ข้อมูลจริง + เปลี่ยนสถานะ) ----
+  const STEPS=['จองแล้ว','ยืนยัน','ให้บริการ','เสร็จสิ้น'];
+  const DONE=[1,2,3,4,1,1]; // step index ต่อ status
+  function timeline(n){return '<div class="bk-steps">'+STEPS.map((s,k)=>{
+    const cls=k<n?'done':k===n?'now':'';
+    return `<div class="bk-step ${cls}"><span class="dot">${k<n?svg('check'):k+1}</span><span class="lb">${s}</span></div>`;}).join('')+'</div>';}
+
+  async function bkAction(id,act){
+    try{await API.patch('/booking/'+id+'/'+act,act==='cancel'?{reason:'ยกเลิกจากหน้าจัดการ'}:undefined);
+      BS.closeModal();BS.toast('อัปเดตสถานะแล้ว');await loadBookings();await loadKanban();}
+    catch(e){BS.toast('ทำรายการไม่สำเร็จ: '+e.message,'x');}
+  }
+  window.bkAction=bkAction;
+  // รับชำระเงิน / ออกบิล จากการจองโดยตรง (Payment ผูก bookingId)
+  window.payBooking=function(id,total,name){
+    const PM=[['เงินสด',0],['พร้อมเพย์',2],['บัตร',3]];
+    BS.modal({title:'รับชำระเงิน · '+name,sub:'ออกใบเสร็จจากการจอง',w:400,
+      body:`<div style="text-align:center;padding:10px 0 16px"><div class="sub" style="font-size:12px">ยอดชำระ</div><div style="font-size:30px;font-weight:700;color:var(--brand-700)">${fmt(total)} ฿</div></div>
+        <div class="field"><label>ช่องทางชำระ</label><div class="seg-full" id="pbPay">${PM.map((p,i)=>`<button class="${i===0?'on':''}" data-m="${p[1]}" type="button">${p[0]}</button>`).join('')}</div></div>`,
+      foot:`<button class="btn btn-ghost" onclick="BS.closeModal()">ยกเลิก</button><button class="btn btn-pri" onclick="window._doPayBk('${id}',${total},'${name}')">${svg('receipt')} ยืนยันรับชำระ</button>`});
+    setTimeout(()=>document.querySelectorAll('#pbPay button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#pbPay button').forEach(x=>x.classList.remove('on'));b.classList.add('on');}),30);
+    window._doPayBk=async(bid,amt,nm)=>{const m=+((document.querySelector('#pbPay button.on')||{}).dataset?.m||0);
+      try{const pay=await API.post('/payment',{bookingId:bid,paymentMethod:m,paidAmount:amt,discountAmount:0});
+        BS.closeModal();BS.toast('รับชำระแล้ว · '+(pay.receiptNo||''),'check');
+        if(BS.invoice)BS.invoice({no:pay.receiptNo||'',date:new Date().toLocaleDateString('th-TH'),customer:nm,method:PM.find(p=>p[1]===m)[0],paid:amt,items:[{name:'บริการตามการจอง',qty:1,price:amt}]});
+        await loadBookings();
+      }catch(e){BS.toast('ชำระไม่สำเร็จ: '+e.message,'x');}};
+  };
+  window.showBk=async function(id){
+    const b0=BK.find(x=>x.id===id)||{};
+    BS.modal({title:'รายละเอียดการจอง',sub:'กำลังโหลด...',w:540,body:'<div style="padding:24px;text-align:center;color:var(--ink-3)">กำลังโหลด...</div>'});
+    let b;try{b=await API.get('/booking/'+id);}catch(e){BS.toast('โหลดไม่สำเร็จ','x');return;}
+    const st=BSTAT[b.status]||['?','b-gray'];const cancelled=b.status===4||b.status===5;const n=DONE[b.status];
+    const nm=(b.customer&&b.customer.displayName)||'-';
+    let foot='';
+    const payBtn=`<button class="btn btn-pri" onclick="payBooking('${id}',${b.totalAmount||0},'${nm.replace(/'/g,'')}')">${svg('wallet')} รับชำระ / ออกบิล</button>`;
+    if(b.status===0)foot=`<button class="btn btn-soft" onclick="bkAction('${id}','confirm')">ยืนยันการจอง</button><button class="btn btn-ghost" style="color:var(--red)" onclick="bkAction('${id}','cancel')">ยกเลิก</button>`;
+    else if(b.status===1)foot=`<button class="btn btn-pri" onclick="bkAction('${id}','start')">${svg('check')} เริ่มให้บริการ</button><button class="btn btn-ghost" onclick="bkAction('${id}','no-show')">ไม่มาตามนัด</button>`;
+    else if(b.status===2)foot=`<button class="btn btn-soft" onclick="bkAction('${id}','complete')">${svg('check')} จบงาน</button>`+payBtn;
+    else if(b.status===3&&!b.paid)foot=b.walkInId?`<button class="btn btn-pri" onclick="location.href='pos.html?walkin=${b.walkInId}'">${svg('wallet')} เก็บเงิน (รอชำระ)</button>`:payBtn;
+    const items=(b.items||[]);
+    BS.modal({title:'การจอง '+(b.bookingNo||''),sub:cancelled?'การจองนี้ถูกยกเลิก':'อัปเดตสถานะการจอง',w:540,
+      body:`
+        <div class="flex ac g12" style="margin-bottom:16px">${av(nm,48)}<div style="flex:1"><div style="font-weight:700;font-size:16px">${nm}</div><div class="sub" style="font-size:12.5px">${(b.customer&&b.customer.phone)||''}</div></div>
+          <span class="badge ${st[1]}">${st[0]}</span>${b.status===3?(b.paid?'<span class="badge b-green">✓ ชำระแล้ว</span>':'<span class="badge b-orange">⚠ รอชำระเงิน</span>'):''}</div>
+        ${cancelled?'':timeline(n)}
+        <div class="bk-info">
+          <div class="it"><span>วันที่จอง</span><b>${API.fmtDate(b.bookingDate)}</b></div>
+          <div class="it"><span>เวลานัด</span><b>${(b.startTime||'').slice(0,5)} - ${(b.endTime||'').slice(0,5)} น.</b></div>
+          <div class="it"><span>ระยะเวลารวม</span><b>${b.totalDurationMins||0} นาที</b></div>
+          <div class="it"><span>ยอดรวม</span><b style="color:var(--brand-700)">${b.totalAmount?fmt(b.totalAmount)+' ฿':'—'}</b></div>
+        </div>
+        <h3 style="font-size:14px;font-weight:600;margin-bottom:6px">รายการบริการ</h3>
+        ${items.map(it=>`<div class="flex ac jb" style="padding:9px 0;border-bottom:1px solid var(--line)"><div><b style="font-weight:600;font-size:13px">${it.service&&it.service.name}</b><div class="sub" style="font-size:12px">${it.durationMins} นาที · หมอนวด ${(it.therapist&&it.therapist.displayName)||'ยังไม่ระบุ'}</div></div><b style="font-weight:600">${fmt(it.price)} ฿</b></div>`).join('')||'<div class="sub" style="font-size:12px">ไม่มีรายการ</div>'}`,
+      foot:foot+`<button class="btn btn-ghost" onclick="BS.closeModal()">ปิด</button>`});
+  };
+
+  window.showQ=async function(id,status){
+    let w;try{w=await API.get('/walk-in/'+id);}catch{BS.toast('โหลดคิวไม่สำเร็จ','x');return;}
+    const nm=(w.customer&&w.customer.displayName)||'ลูกค้า';const done=status===2;
+    // status 0 (รอคิว) → ต้องเลือกหมอที่ทำได้+ว่างก่อนเริ่ม
+    let availBlock='';let avail=[];
+    if(status===0){
+      const serviceIds=[...new Set((w.items||[]).map(it=>it.service&&it.service.id).filter(Boolean))];
+      try{const qs=serviceIds.map(s=>'serviceIds='+s).join('&');const map=await API.get('/walk-in/available-therapists?'+qs);
+        const lists=serviceIds.map(s=>(map[s]||[]));if(lists.length)avail=lists[0].filter(t=>lists.every(l=>l.some(x=>x.id===t.id)));}catch(e){}
+      const svcNames=(w.items||[]).map(it=>it.service&&it.service.name).join(', ');
+      availBlock=`<div class="field" style="margin-top:12px;margin-bottom:0"><label>หมอนวดที่ทำ "${svcNames}" ได้ และว่างขณะนี้</label>
+        ${avail.length?`<select id="qThB">${avail.map(t=>`<option value="${t.id}">${t.displayName}${t.code?' · '+t.code:''}</option>`).join('')}</select>`:`<div style="color:var(--red);font-size:12.5px;padding:8px 11px;background:#fdecee;border:1px solid #f4ccd0;border-radius:10px">⚠️ ไม่มีหมอนวดที่ทำบริการนี้ได้และว่าง · รอหมอนวดว่างก่อน</div>`}</div>`;
+    }
+    let act;
+    if(status===0)act=`<button class="btn btn-pri" ${avail.length?'':'disabled style="opacity:.5;cursor:not-allowed"'} onclick="window._qstart('${id}')">${svg('check')} เรียกคิว / เริ่มบริการ</button>`;
+    else if(status===1)act=`<button class="btn btn-pri" onclick="location.href='pos.html?walkin=${id}'">${svg('wallet')} ไปชำระเงิน (POS)</button>`;
+    else if(status===2&&!w.paid)act=`<button class="btn btn-pri" onclick="location.href='pos.html?walkin=${id}'">${svg('wallet')} เก็บเงิน (รอชำระ)</button>`;
+    else act='';
+    BS.modal({title:'คิว '+(w.queueNo||'')+' · '+nm,sub:done?(w.paid?'งานเสร็จ · ✓ ชำระเงินแล้ว':'งานเสร็จ · ⚠ ยังไม่ชำระเงิน'):'สถานะ: '+['รอคิว','กำลังให้บริการ','เสร็จสิ้น'][status],w:440,
+      body:`<div class="flex ac g12" style="margin-bottom:16px">${av(nm,44)}<div style="flex:1"><div style="font-weight:700;font-size:15px">${nm}</div><div class="sub" style="font-size:12.5px">${(w.customer&&w.customer.phone)||''}</div></div><span class="badge ${done?'b-green':'b-purple'}" style="font-size:13px">${w.queueNo||''}</span></div>
+        ${(w.items||[]).map(it=>`<div class="flex ac jb" style="padding:8px 0;border-bottom:1px solid var(--line)"><div><b style="font-weight:600;font-size:13px">${it.service&&it.service.name}</b>${it.therapist?`<div class="sub" style="font-size:12px">หมอนวด ${it.therapist.displayName}</div>`:''}</div><b>${fmt(it.price)} ฿</b></div>`).join('')}${availBlock}
+        ${done?'':`<div class="flex g8" style="margin-top:12px"><button class="btn btn-ghost btn-sm" style="color:var(--red);border-color:#f4ccd0" onclick="window._qcancel('${id}')">ยกเลิกคิว</button></div>`}`,
+      foot:`<button class="btn btn-ghost" onclick="BS.closeModal()">ปิด</button>${act}`});
+    window._qstart=async(wid)=>{const sel=document.getElementById('qThB');const tid=sel?sel.value:null;if(!tid){BS.toast('ไม่มีหมอนวดที่ทำบริการนี้ได้และว่าง','x');return;}const thName=sel.options[sel.selectedIndex].text;
+      try{await API.patch('/walk-in/'+wid+'/assign',{therapistId:tid,roomId:null});await API.patch('/walk-in/'+wid+'/start');BS.closeModal();BS.toast('เรียกคิวแล้ว · มอบหมาย '+thName);await loadKanban();}catch(e){BS.toast('ไม่สำเร็จ: '+e.message,'x');}};
+    window._qcancel=async(wid)=>{try{await API.patch('/walk-in/'+wid+'/cancel',{reason:'ยกเลิกจากคิว'});BS.closeModal();BS.toast('ยกเลิกคิวแล้ว');await loadKanban();}catch(e){BS.toast('ไม่สำเร็จ','x');}};
+  };
+
+  // ส่งออกรายการจอง (CSV จริง จากข้อมูลที่โหลด)
+  window.bkExport=function(){
+    if(!BK.length){BS.toast('ไม่มีข้อมูลให้ส่งออก','x');return;}
+    const esc=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+    const head=['รหัส','ลูกค้า','เบอร์โทร','จำนวนบริการ','เวลานัด','สถานะ','ยอด(บาท)'];
+    const rows=BK.map(b=>[b.bookingNo||'',(b.customer&&b.customer.displayName)||'',(b.customer&&b.customer.phone)||'',b.itemCount||0,(b.startTime||'').slice(0,5),(BSTAT[b.status]||['?'])[0],b.totalAmount||0]);
+    const csv='﻿'+[head,...rows].map(r=>r.map(esc).join(',')).join('\r\n');
+    const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='bookings-'+today+'.csv';a.click();URL.revokeObjectURL(a.href);
+    BS.toast('ส่งออก '+BK.length+' รายการเป็น CSV แล้ว');
+  };
+  window.statList=function(st){
+    // การ์ดใบ 2-4 = ตัวเลข "คิวงานวันนี้" (walk-in) ไม่ใช่สถานะรายการจอง → กดแล้วพาไปดูคิวจริง
+    if(st==='all'){STAT_FILTER=null;PAGE_N=1;setTab('list');renderTable();BS.toast('แสดงการจองทั้งหมด');return;}
+    setTab('queue');history.replaceState(null,'','#queue');if(typeof loadKanban==='function')loadKanban();
+    BS.toast('ไปที่คิวงานวันนี้: '+st);
+  };
+  window.filterBy=async function(label){
+    if(label!=='สถานะ'){
+      // ฟิลเตอร์หมอนวดจริง — รายชื่อจาก DB ไม่ใช่ hardcode
+      let ths=[];try{ths=await API.get('/therapist')||[];}catch(e){}
+      const cur=TH_FILTER||new Set(ths.map(t=>t.id));
+      BS.modal({title:'กรองตามหมอนวด',sub:'แสดงเฉพาะการจองของหมอนวดที่เลือก',w:380,
+        body:ths.map(t=>`<label class="flex ac jb" style="padding:9px 0;border-bottom:1px solid var(--line);cursor:pointer"><span style="font-size:13.5px">${t.displayName}${t.code?' · '+t.code:''}</span><input type="checkbox" class="thf-cb" value="${t.id}" ${cur.has(t.id)?'checked':''} style="width:16px;height:16px;accent-color:var(--brand)"></label>`).join(''),
+        foot:`<button class="btn btn-ghost" onclick="window._clrThF()">แสดงทั้งหมด</button><button class="btn btn-pri" onclick="window._applyThF()">${svg('check')} ใช้ตัวกรอง</button>`});
+      window._applyThF=()=>{const sel=[...document.querySelectorAll('.thf-cb:checked')].map(c=>c.value);TH_FILTER=sel.length&&sel.length<ths.length?new Set(sel):null;BS.closeModal();PAGE_N=1;renderTable();BS.toast('กรองแล้ว');};
+      window._clrThF=()=>{TH_FILTER=null;BS.closeModal();PAGE_N=1;renderTable();BS.toast('แสดงทุกคน');};
+      return;
+    }
+    const cur=STAT_FILTER||new Set([0,1,2,3,4,5]);
+    BS.modal({title:'กรองตามสถานะ',sub:'เลือกสถานะที่ต้องการแสดง',w:380,
+      body:`<div style="display:flex;flex-direction:column;gap:2px">${BSTAT.map((s,i)=>`<label class="flex ac jb" style="padding:9px 0;border-bottom:1px solid var(--line);cursor:pointer"><span style="font-size:13.5px;font-weight:500"><span class="badge ${s[1]}">${s[0]}</span></span><input type="checkbox" class="stf-cb" value="${i}" ${cur.has(i)?'checked':''} style="width:16px;height:16px;accent-color:var(--brand)"></label>`).join('')}</div>`,
+      foot:`<button class="btn btn-ghost" onclick="window._clrFilter()">แสดงทั้งหมด</button><button class="btn btn-pri" onclick="window._applyFilter()">${svg('check')} ใช้ตัวกรอง</button>`});
+    window._applyFilter=()=>{const sel=[...document.querySelectorAll('.stf-cb:checked')].map(c=>+c.value);STAT_FILTER=sel.length&&sel.length<BSTAT.length?new Set(sel):null;BS.closeModal();renderTable();BS.toast('กรองแล้ว');};
+    window._clrFilter=()=>{STAT_FILTER=null;BS.closeModal();renderTable();BS.toast('แสดงทั้งหมด');};
+  };
+};
+</script>
+<script src="../assets/api.js?v=2"></script>
+<script src="../assets/shell.js?v=8"></script>
+</body>
+</html>

@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 21c-4.5 0-8-2.6-8-6 0 0 2.4.4 4 1.6C10.7 11.7 12 9 12 9s1.3 2.7 4 7.6c1.6-1.2 4-1.6 4-1.6 0 3.4-3.5 6-8 6Z' fill='%236c5ce7'/></svg>">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JavaXd · ชำระเงิน / ออกบิล</title>
+<link rel="stylesheet" href="../assets/theme.css?v=1">
+<style>
+.pos{display:grid;grid-template-columns:1fr 392px;gap:22px;align-items:start}
+@media(max-width:1180px){.pos{grid-template-columns:1fr}}
+.queue-strip{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;margin-bottom:16px}
+.qchip{flex:0 0 auto;display:flex;align-items:center;gap:9px;background:#fff;border:1px solid var(--line);border-radius:13px;padding:8px 13px 8px 8px;cursor:pointer;transition:.12s}
+.qchip:hover{border-color:var(--brand);box-shadow:var(--shadow)}
+.qchip .nm{font-weight:600;font-size:12.5px}.qchip .mt{font-size:11px;color:var(--ink-3)}
+.cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:1480px){.cat-grid{grid-template-columns:repeat(2,1fr)}}
+.pcard{background:#fff;border:1px solid var(--line);border-radius:15px;box-shadow:var(--shadow);padding:15px;cursor:pointer;transition:.13s;text-align:left;position:relative}
+.pcard:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg);border-color:var(--brand-soft)}
+.pcard:active{transform:translateY(0)}
+.pcard .ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;margin-bottom:11px}
+.pcard h4{font-size:14px;font-weight:600}
+.pcard .dur{font-size:11.5px;color:var(--ink-3);margin-top:2px}
+.pcard .pr{font-size:17px;font-weight:700;margin-top:9px}
+.pcard .pr small{font-size:11px;font-weight:500;color:var(--ink-3)}
+.pcard .add{position:absolute;top:13px;right:13px;width:26px;height:26px;border-radius:8px;background:var(--brand-soft);color:var(--brand);display:grid;place-items:center;opacity:0;transition:.13s}
+.pcard:hover .add{opacity:1}
+.pcard .add svg{width:15px;height:15px}
+
+.bill{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);position:sticky;top:90px;display:flex;flex-direction:column;max-height:calc(100vh - 110px)}
+.bill-h{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.bill-h h3{font-size:15px;font-weight:700}
+.bill-h .bno{margin-left:auto;font-size:11.5px;color:var(--ink-3);font-family:'IBM Plex Sans',monospace}
+.bill-cust{padding:13px 18px;border-bottom:1px solid var(--line)}
+.cust-pick{display:flex;align-items:center;gap:10px;background:var(--card-2);border:1px solid var(--line);border-radius:12px;padding:9px 12px;cursor:pointer}
+.cust-pick:hover{border-color:var(--brand)}
+.cust-pick .nm{font-weight:600;font-size:13px}.cust-pick .mt{font-size:11px;color:var(--ink-3)}
+.bill-items{flex:1;overflow-y:auto;padding:6px 18px;min-height:120px}
+.bitem{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--line)}
+.bitem:last-child{border-bottom:none}
+.bitem .bi-ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:0 0 34px}
+.bitem .bi-nm{font-weight:600;font-size:13px}.bitem .bi-sub{font-size:11px;color:var(--ink-3)}
+.bitem .bi-pr{font-weight:600;font-size:13px;white-space:nowrap}
+.stepper{display:flex;align-items:center;gap:0;border:1px solid var(--line-2);border-radius:9px;overflow:hidden}
+.stepper button{width:26px;height:26px;display:grid;place-items:center;color:var(--ink-2);background:#fff}
+.stepper button:hover{background:var(--brand-soft);color:var(--brand)}
+.stepper span{width:26px;text-align:center;font-size:13px;font-weight:600}
+.bill-empty{text-align:center;color:var(--ink-3);padding:34px 10px;font-size:13px}
+.bill-empty svg{width:34px;height:34px;opacity:.4;margin-bottom:8px}
+.bill-foot{border-top:1px solid var(--line);padding:14px 18px}
+.coupon-row{display:flex;gap:8px;margin-bottom:12px}
+.coupon-row input{flex:1;height:38px;border:1px solid var(--line-2);border-radius:10px;padding:0 12px;font-family:inherit;font-size:12.5px;text-transform:uppercase}
+.coupon-row input:focus{outline:none;border-color:var(--brand)}
+.sumline{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-2);padding:3px 0}
+.sumline.grand{font-size:16px;font-weight:700;color:var(--ink);padding-top:9px;margin-top:6px;border-top:1px dashed var(--line-2)}
+.sumline.grand b{color:var(--brand-700)}
+.pay-methods{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:13px 0}
+.pm-opt{border:1.5px solid var(--line-2);border-radius:11px;padding:9px 4px;text-align:center;cursor:pointer;transition:.12s;font-size:11px;color:var(--ink-2);font-weight:500}
+.pm-opt svg{width:18px;height:18px;display:block;margin:0 auto 4px}
+.pm-opt:hover{border-color:var(--brand)}
+.pm-opt.on{border-color:var(--brand);background:var(--brand-soft);color:var(--brand-700);font-weight:600}
+.cash-quick{display:flex;gap:6px;margin-bottom:10px}
+.cash-quick button{flex:1;height:34px;border:1px solid var(--line-2);border-radius:9px;font-size:12px;font-weight:600;color:var(--ink-2)}
+.cash-quick button:hover{border-color:var(--brand);color:var(--brand)}
+.pay-detail{margin:10px 0}
+.qr-box{text-align:center;padding:14px;background:var(--card-2);border:1px solid var(--line);border-radius:13px}
+.qr-promptpay{width:150px;height:150px;margin:8px auto;background:#fff;border-radius:12px;border:1px solid var(--line-2);display:grid;place-items:center;position:relative}
+.qr-promptpay svg{width:110px;height:110px;color:#1a2138}
+.qr-tag{display:inline-flex;align-items:center;gap:6px;background:#003d6b;color:#fff;font-size:11px;font-weight:700;padding:4px 11px;border-radius:6px;letter-spacing:.03em}
+.btn-charge{width:100%;height:52px;border-radius:14px;background:var(--brand-grad);color:#fff;font-weight:700;font-size:16px;box-shadow:0 8px 20px rgba(108,92,231,.35);display:flex;align-items:center;justify-content:center;gap:10px;transition:.15s}
+.btn-charge:hover{filter:brightness(1.05);transform:translateY(-1px)}
+.btn-charge svg{width:20px;height:20px;flex:0 0 20px}
+.btn-charge:disabled{background:#cbd0e0;box-shadow:none;cursor:not-allowed;transform:none;filter:none}
+</style>
+</head>
+<body data-title="ชำระเงิน / ออกบิล">
+
+<template id="page">
+  <div class="page-h">
+    <div class="ttl"><h2>ชำระเงิน / ออกบิล (POS)</h2><p>สร้างบิล รับชำระเงิน และออกใบเสร็จ/ใบกำกับภาษีให้ลูกค้าหน้าร้าน</p></div>
+    <div class="sp">
+      <button class="btn btn-ghost" onclick="holdBill()" data-i="clock" style="position:relative">พักบิล</button><span class="badge b-orange" id="heldN" style="display:none;align-self:center"></span>
+      <button class="btn btn-ghost" onclick="newBill()" data-i="plus">บิลใหม่</button>
+    </div>
+  </div>
+
+  <div class="pos">
+    <!-- LEFT: catalog -->
+    <div>
+      <div class="card card-pad" style="margin-bottom:18px;padding:16px 18px">
+        <div class="flex ac jb" style="margin-bottom:11px"><h3 style="font-size:14px;font-weight:700">ลูกค้าในคิว · กดเพื่อโหลดเข้าบิล</h3><span class="badge b-orange">รอชำระ 4</span></div>
+        <div class="queue-strip" id="qstrip"></div>
+      </div>
+
+      <div class="flex ac g12 wrap" style="margin-bottom:16px">
+        <div class="search" style="max-width:280px;flex:0 0 280px"><input placeholder="ค้นหาบริการ / คอร์ส"></div>
+        <div class="seg" id="catseg"><button class="on" data-c="all">ทั้งหมด</button><button data-c="นวด">นวด</button><button data-c="สปา">สปา</button><button data-c="คอร์ส">คอร์ส</button></div>
+      </div>
+      <div class="cat-grid" id="catalog"></div>
+    </div>
+
+    <!-- RIGHT: bill -->
+    <div class="bill">
+      <div class="bill-h"><span class="bi-ic" style="width:30px;height:30px;background:var(--brand-soft);color:var(--brand);border-radius:9px;display:grid;place-items:center"></span><h3>บิลปัจจุบัน</h3><span class="bno" id="bno"></span></div>
+      <div class="bill-cust">
+        <div class="cust-pick" onclick="pickCust()" id="custPick"></div>
+      </div>
+      <div class="bill-items" id="items"></div>
+      <div class="bill-foot">
+        <div class="coupon-row"><input id="coupon" placeholder="ใส่รหัสคูปอง"><button class="btn btn-ghost btn-sm" onclick="applyCoupon()">ใช้</button></div>
+        <div id="sums"></div>
+        <div class="pay-methods" id="pms"></div>
+        <div class="pay-detail" id="paydetail"></div>
+        <button class="btn-charge" id="chargeBtn" onclick="charge()"></button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>window.BASE='../';window.PAGE='pos';</script>
+<script>if(!localStorage.getItem('th_auth'))location.href=(window.BASE||'')+'login.html';</script>
+<script>
+window.PAGE_INIT=function(){
+  document.querySelectorAll('[data-i]').forEach(e=>{const t=e.textContent.trim();e.innerHTML=svg(e.dataset.i)+(t?'<span>'+t+'</span>':'')});
+  document.querySelector('.bill-h .bi-ic').innerHTML=svg('receipt');
+
+  const colorFor=(name)=>{const n=name||'';
+    if(n.includes('อโรมา'))return['#e6a23c','สปา'];
+    if(n.includes('น้ำมัน'))return['#3ea8c9','นวด'];
+    if(n.includes('ประคบ'))return['#7cc47a','สปา'];
+    if(n.includes('เท้า'))return['#f08aa8','นวด'];
+    if(n.includes('คอ')||n.includes('บ่า')||n.includes('ไหล่'))return['#f0b07a','นวด'];
+    return['#8b7cf0','นวด'];};
+  let MENU=[]; let CUSTOMERS=[];
+
+  async function loadCatalog(){
+    try{
+      const svc=await API.get('/services')||[];
+      MENU=svc.filter(s=>s.isActive!==false).map(s=>{const cat=(s.category&&s.category.name)||'';const c=colorFor(s.name||cat);
+        return {id:s.id,name:s.name,sub:s.durationMins+' นาที',price:s.price,col:c[0],grp:c[1]};});
+      renderCatalog('all');
+    }catch(e){console.error('catalog',e);document.getElementById('catalog').innerHTML='<div style="color:var(--red);padding:20px">โหลดบริการไม่สำเร็จ</div>';}
+  }
+  // catalog
+  function renderCatalog(cat){
+    const list=cat&&cat!=='all'?MENU.filter(m=>m.grp===cat):MENU;
+    document.getElementById('catalog').innerHTML=list.length?list.map(m=>{
+      const c=m.col;
+      return `<button class="pcard" onclick="addItem('${m.id}')">
+        <span class="add">${svg('plus')}</span>
+        <div class="ic" style="background:${c}22;color:${c}">${svg('spa')}</div>
+        <h4>${m.name}</h4><div class="dur">${m.sub}</div>
+        <div class="pr">${fmt(m.price)} <small>฿</small></div></button>`;
+    }).join(''):'<div style="color:var(--ink-3);padding:20px">ไม่มีบริการในหมวดนี้</div>';
+  }
+  loadCatalog();
+  document.querySelectorAll('#catseg button').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('#catseg button').forEach(x=>x.classList.remove('on'));b.classList.add('on');renderCatalog(b.dataset.c);
+  });
+
+  // ---- queue strip: ลูกค้าในคิวจริง (รอ/กำลังบริการ) ----
+  async function loadQueue(){
+    try{
+      const r=await API.get('/walk-in?date='+(d=>new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10))(new Date())+'&pageSize=50');
+      // แสดงคิวที่ยังไม่จ่ายเงินทั้งหมด: จบงานแล้ว (รอชำระ — สำคัญสุด ขึ้นก่อน) > กำลังบริการ > รอคิว
+      const items=((r&&r.items)||[]).filter(w=>!w.paid&&(w.status===0||w.status===1||w.status===2))
+        .sort((a,b)=>(b.status===2?1:0)-(a.status===2?1:0));
+      window.QWALK=items;
+      const payable=items.filter(w=>w.status===2).length;
+      const badge=document.querySelector('#qstrip').closest('.card').querySelector('.badge');
+      if(badge)badge.textContent='รอชำระ '+payable;
+      document.getElementById('qstrip').innerHTML=items.length?items.map((q,i)=>{const nm=(q.customer&&q.customer.displayName)||'ลูกค้า';return `
+        <div class="qchip" onclick="loadQ(${i})" style="${q.status===2?'border:1.5px solid #22b07d;background:#f2fbf7':''}">${av(nm,32)}<div><div class="nm">${nm}</div><div class="mt" style="${q.status===2?'color:#178a61;font-weight:600':''}">${q.itemCount||0} บริการ · ${q.stateLabel||''}</div></div></div>`}).join(''):'<div style="color:var(--ink-3);font-size:13px;padding:8px">ไม่มีลูกค้าในคิว</div>';
+    }catch(e){console.error('queue',e);}
+  }
+  loadQueue();
+  window.loadQById=async function(wid){
+    try{
+      const w=await API.get('/walk-in/'+wid);
+      newBill();
+      state.walkInId=w.id;
+      state.cust=(w.customer&&w.customer.displayName)||'';state.custId=w.customer&&w.customer.id;
+      state.cart=(w.items||[]).map(it=>({id:it.service.id,name:it.service.name,sub:(it.durationMins||0)+' นาที',price:it.price,col:colorFor(it.service.name)[0],qty:1}));
+      render();loadCustPackages(state.custId);BS.toast('โหลด '+state.cust+' เข้าบิลแล้ว');
+    }catch(e){BS.toast('โหลดคิวไม่สำเร็จ','x');}
+  };
+  window.loadQ=function(i){const q=window.QWALK[i];if(q)loadQById(q.id);};
+  // มาจากปุ่ม "ไปชำระเงิน" หน้าอื่น → ดึงลูกค้าคนนั้นเข้าบิลทันที ไม่ต้องเลือกซ้ำ
+  const payWid=new URLSearchParams(location.search).get('walkin');
+  if(payWid)loadQById(payWid);
+
+  // ---- bill state ----
+  const state={cart:[],cust:'',custId:null,walkInId:null,method:'cash',received:0,coupon:null,no:'(ออกเลขเมื่อชำระ)',custPackages:[]};
+  window.state=state;
+
+  // โหลดคอร์สคงเหลือของลูกค้า (ใช้ตัดคอร์สใน POS)
+  async function loadCustPackages(id){state.custPackages=[];if(id){try{state.custPackages=await API.get('/package/customer/'+id)||[];}catch(e){}}render();}
+  // เลือกใช้คอร์สตัดบริการนี้ (ตัด 1 ครั้งต่อ qty)
+  window.useCourse=function(itemId){const it=state.cart.find(c=>c.id===itemId);if(!it)return;
+    const pkg=(state.custPackages||[]).find(p=>p.remainingSessions>0);
+    if(!pkg){BS.toast('ลูกค้าไม่มีคอร์สคงเหลือ','x');return;}
+    it.fromCourse=true;it.cpId=pkg.id;it.cpName=pkg.packageName;render();BS.toast('ตัดจากคอร์ส '+pkg.packageName);};
+  window.undoCourse=function(itemId){const it=state.cart.find(c=>c.id===itemId);if(it){it.fromCourse=false;it.cpId=null;}render();};
+
+  window.addItem=function(id){
+    const m=MENU.find(x=>x.id===id);if(!m)return;
+    const ex=state.cart.find(c=>c.id===id);
+    if(ex)ex.qty++;else state.cart.push({id,name:m.name,sub:m.sub,price:m.price,col:m.col,icon:'spa',qty:1});
+    render();
+  };
+  window.chg=function(id,d){
+    const it=state.cart.find(c=>c.id===id);if(!it)return;
+    it.qty+=d;if(it.qty<=0)state.cart=state.cart.filter(c=>c.id!==id);render();
+  };
+  window.newBill=function(){state.cart=[];state.cust='';state.custId=null;state.walkInId=null;state.coupon=null;state.received=0;state.method='cash';state.no='(ออกเลขเมื่อชำระ)';state.custPackages=[];document.getElementById('coupon').value='';render()};
+  window.pickCust=function(){
+    BS.modal({title:'เลือกลูกค้า',sub:'พิมพ์ชื่อหรือเบอร์โทรเพื่อค้นหาจากฐานข้อมูลจริง',w:440,
+      body:`<div class="field"><label>ค้นหาลูกค้า</label><input placeholder="พิมพ์ชื่อ / เบอร์โทร" id="cf" autocomplete="off"></div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:6px;max-height:280px;overflow-y:auto" id="cfList"></div>`,
+      foot:`<button class="btn btn-pri" id="cfNew">${svg('plus')} เพิ่มลูกค้าใหม่</button>`});
+    setTimeout(async()=>{
+      const inp=document.getElementById('cf'),list=document.getElementById('cfList'),btn=document.getElementById('cfNew');
+      if(!CUSTOMERS.length){try{const r=await API.get('/customer?pageSize=500');CUSTOMERS=(r&&r.items)||[];}catch{}}
+      function renderList(){
+        const q=inp.value.trim().toLowerCase();
+        const hits=CUSTOMERS.filter(c=>!q||((c.displayName||'')+(c.phone||'')).toLowerCase().includes(q)).slice(0,30);
+        // ใช้ data-attribute + event listener (เดิมฝัง JSON ใน onclick ทำให้ attribute พังเมื่อชื่อมีเครื่องหมายคำพูด → กดเลือกไม่ได้)
+        list.innerHTML=hits.length?hits.map((c,idx)=>`<div class="cust-pick" data-idx="${idx}" style="cursor:pointer">${av(c.displayName,32)}<div><div class="nm">${c.displayName}</div><div class="mt">${c.phone||'—'} · ใช้บริการ ${c.totalVisits||0} ครั้ง</div></div><span class="badge b-purple" style="margin-left:auto">เลือก</span></div>`).join('')
+          :`<div style="text-align:center;padding:18px 6px;color:var(--ink-3);font-size:13px">ไม่พบ “${inp.value}” ในฐานข้อมูล<br><span style="font-size:12px">กด “เพิ่มลูกค้าใหม่” เพื่อบันทึก</span></div>`;
+        list.querySelectorAll('.cust-pick').forEach(el=>el.onclick=()=>{const c=hits[+el.dataset.idx];if(c)setCust(c.id,c.displayName);});
+        btn.innerHTML=svg('plus')+' เพิ่มลูกค้าใหม่'+(q?' “'+inp.value.trim()+'”':'');
+      }
+      inp.addEventListener('input',renderList);renderList();inp.focus();
+      btn.onclick=async()=>{
+        const n=inp.value.trim();
+        if(!n){BS.toast('พิมพ์ชื่อลูกค้าก่อน','x');inp.focus();return}
+        try{const c=await API.post('/customer',{displayName:n,phone:null,notes:null});CUSTOMERS.unshift({id:c.id,displayName:n});setCust(c.id,n);BS.toast('บันทึกลูกค้าใหม่ “'+n+'” แล้ว');}catch(e){BS.toast('เพิ่มลูกค้าไม่สำเร็จ','x');}
+      };
+    },40);
+  };
+  window.setCust=function(id,n){state.custId=id;state.cust=n;BS.closeModal();render();loadCustPackages(id)};
+  window.applyCoupon=async function(){
+    const v=document.getElementById('coupon').value.trim().toUpperCase();
+    if(!v){state.coupon=null;render();return;}
+    try{const c=await API.get('/promotion/validate/'+encodeURIComponent(v));
+      state.coupon={code:c.code,label:c.label||c.code,pct:c.discountPercent||0,amt:c.discountAmount||0};
+      BS.toast('ใช้ '+(c.label||v)+' แล้ว');
+    }catch(e){state.coupon=null;BS.toast(e.message||'ไม่พบรหัสคูปองนี้','x');}
+    render();
+  };
+  window.setMethod=function(m){state.method=m;state.received=0;render()};
+  // ---- Thai QR PromptPay จริง (payload จาก backend ตามมาตรฐาน EMVCo) ----
+  let _qrSeq=0;
+  async function renderPromptpayQR(amount){
+    const seq=++_qrSeq;
+    if(amount<=0)return;
+    try{
+      const d=await API.get('/payment/qr?amount='+amount.toFixed(2));
+      if(seq!==_qrSeq)return; // ยอดเปลี่ยนระหว่างโหลด — ทิ้งอันเก่า
+      const box=document.getElementById('ppQr');if(!box)return;
+      const draw=()=>{box.innerHTML='';try{new QRCode(box,{text:d.payload,width:138,height:138,correctLevel:QRCode.CorrectLevel.M});}catch(e){}};
+      if(window.QRCode)draw();
+      else{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';s.onload=draw;document.head.appendChild(s);}
+      const note=document.getElementById('ppNote');
+      if(note&&d.isDemo)note.innerHTML='⚠ โหมดเดโม่ (เบอร์ตัวอย่าง) — ตั้ง PromptPay จริงของร้านในหน้าตั้งค่า';
+      else if(note)note.textContent='PromptPay: '+d.promptpayId+' · สแกนด้วยแอปธนาคารใดก็ได้';
+    }catch(e){console.warn('qr',e);}
+  }
+  window.renderPromptpayQR=renderPromptpayQR;
+  window.setReceived=function(v){state.received=v;render()};
+  // พิมพ์ตัวเลขในช่อง "รับเงินมา" — อัปเดตเงินทอนตรงๆ ไม่ re-render ทั้งบิล (ไม่งั้นโฟกัสหลุดทุกตัวอักษร)
+  window.recvTyped=function(v){
+    state.received=v||0;
+    const t=totals();const change=Math.max(0,state.received-t.total);
+    const line=document.getElementById('changeLine');
+    if(line){line.style.display=state.received?'':'none';
+      const s=line.querySelector('span:last-child');if(s){s.textContent=fmt(change)+' ฿';s.className=change>=0?'t-green':'t-red';}}
+  };
+
+  function totals(){
+    const gross=state.cart.reduce((s,c)=>s+c.price*c.qty,0);
+    const courseDisc=state.cart.filter(c=>c.fromCourse).reduce((s,c)=>s+c.price*c.qty,0); // ตัดคอร์ส = ไม่คิดเงินส่วนนี้
+    const payableGross=gross-courseDisc;
+    let coup=0;
+    if(state.coupon){if(state.coupon.amt)coup=state.coupon.amt;else if(state.coupon.pct)coup=Math.round(payableGross*state.coupon.pct/100)}
+    const disc=courseDisc+coup;
+    const total=Math.max(0,gross-disc);
+    return{gross,disc,coup,courseDisc,total,net:total/1.07,vat:total-total/1.07};
+  }
+
+  function render(){
+    // customer
+    document.getElementById('bno').textContent='#'+state.no;
+    document.getElementById('custPick').innerHTML=state.cust
+      ? `${av(state.cust,32)}<div><div class="nm">${state.cust}</div><div class="mt">แตะเพื่อเปลี่ยน</div></div><span class="badge b-green" style="margin-left:auto;display:inline-flex;align-items:center;gap:5px"><svg viewBox="0 0 24 24" style="width:12px;height:12px"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>ลูกค้าบิลนี้</span>`
+      : `<span class="bi-ic" style="width:32px;height:32px;background:#eef0f6;color:var(--ink-3);border-radius:9px;display:grid;place-items:center">${svg('users')}</span><div><div class="nm">เลือกลูกค้า</div><div class="mt">หรือ Walk-in</div></div><span class="badge b-gray" style="margin-left:auto">เลือก</span>`;
+    // items
+    const it=document.getElementById('items');
+    if(!state.cart.length){it.innerHTML=`<div class="bill-empty">${svg('receipt')}<div>ยังไม่มีรายการ</div><div style="font-size:12px;margin-top:3px">แตะบริการทางซ้ายเพื่อเพิ่มลงบิล</div></div>`}
+    else it.innerHTML=state.cart.map(c=>{const hasPkg=(state.custPackages||[]).some(p=>p.remainingSessions>0);
+      return `
+      <div class="bitem">
+        <span class="bi-ic" style="background:${c.col}22;color:${c.col}">${svg(c.icon)}</span>
+        <div style="flex:1"><div class="bi-nm">${c.name}</div><div class="bi-sub">${c.sub} · ${fmt(c.price)} ฿</div>
+          ${c.fromCourse?`<div style="margin-top:3px"><span class="badge b-purple" style="font-size:10.5px">${svg('tag')} ตัดจากคอร์ส</span> <a onclick="undoCourse('${c.id}')" style="font-size:11px;color:var(--ink-3);cursor:pointer">ยกเลิก</a></div>`:(hasPkg?`<a onclick="useCourse('${c.id}')" style="font-size:11px;color:var(--brand-700);cursor:pointer;font-weight:600">${svg('tag')} ใช้คอร์ส (ตัดครั้ง)</a>`:'')}</div>
+        <div class="stepper"><button onclick="chg('${c.id}',-1)"><svg viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M6 12h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button><span>${c.qty}</span><button onclick="chg('${c.id}',1)">${svg('plus')}</button></div>
+        <div class="bi-pr"${c.fromCourse?' style="text-decoration:line-through;color:var(--ink-3)"':''}>${fmt(c.price*c.qty)}</div>
+      </div>`}).join('');
+    // sums
+    const t=totals();
+    document.getElementById('sums').innerHTML=
+      `<div class="sumline"><span>ยอดรวม (${state.cart.reduce((s,c)=>s+c.qty,0)} รายการ)</span><span>${fmt(t.gross)} ฿</span></div>`+
+      (t.courseDisc?`<div class="sumline"><span>ตัดจากคอร์ส</span><span class="t-red">-${fmt(t.courseDisc)} ฿</span></div>`:'')+
+      (t.coup?`<div class="sumline"><span>ส่วนลด${state.coupon?' · '+state.coupon.code:''}</span><span class="t-red">-${fmt(t.coup)} ฿</span></div>`:'')+
+      `<div class="sumline"><span>ภาษีมูลค่าเพิ่ม 7% (รวมแล้ว)</span><span>${BS.fmtTHB(t.vat)} ฿</span></div>`+
+      `<div class="sumline grand"><span>ยอดสุทธิ</span><b>฿ ${fmt(t.total)}</b></div>`;
+    // payment methods
+    const PM=[['cash','wallet','เงินสด'],['promptpay','qr','พร้อมเพย์'],['card','wallet','บัตร']];
+    document.getElementById('pms').style.gridTemplateColumns='repeat(3,1fr)';
+    document.getElementById('pms').innerHTML=PM.map(p=>`<div class="pm-opt${state.method===p[0]?' on':''}" onclick="setMethod('${p[0]}')">${svg(p[1])}${p[2]}</div>`).join('');
+    // pay detail
+    const pd=document.getElementById('paydetail');
+    if(state.method==='cash'){
+      const change=Math.max(0,state.received-t.total);
+      pd.innerHTML=`<div class="cash-quick">${[t.total,Math.ceil(t.total/100)*100,Math.ceil(t.total/500)*500,Math.ceil(t.total/1000)*1000].filter((v,i,a)=>a.indexOf(v)===i).map(v=>`<button onclick="setReceived(${v})">${fmt(v)}</button>`).join('')}</div>
+        <div class="field"><input type="number" id="cashRecv" placeholder="รับเงินมา (บาท)" value="${state.received||''}" oninput="recvTyped(+this.value)" style="height:42px"></div>
+        <div class="sumline" id="changeLine" style="margin-top:8px;font-weight:600;${state.received?'':'display:none'}"><span>เงินทอน</span><span class="${change>=0?'t-green':'t-red'}">${fmt(change)} ฿</span></div>`;
+    } else if(state.method==='promptpay'){
+      pd.innerHTML=`<div class="qr-box"><span class="qr-tag">Thai QR · PromptPay</span><div class="qr-promptpay" id="ppQr">${svg('qr')}</div>
+        <div style="font-size:13px;font-weight:700">ยอดชำระ ฿ ${fmt(t.total)}</div>
+        <div style="font-size:11px;color:var(--ink-3);margin-top:2px" id="ppNote">สแกนด้วยแอปธนาคารใดก็ได้ · JavaXd Massage</div></div>`;
+      renderPromptpayQR(t.total); // QR จริงมาตรฐาน EMVCo — แอปธนาคารสแกนจ่ายได้
+    } else if(state.method==='card'){
+      pd.innerHTML=`<div class="qr-box" style="padding:18px"><div class="bi-ic" style="width:42px;height:42px;border-radius:12px;background:var(--brand-soft);color:var(--brand);margin:0 auto 8px">${svg('wallet')}</div><div style="font-size:13px;font-weight:600">รูดบัตรเครดิต / เดบิต</div><div style="font-size:11px;color:var(--ink-3);margin-top:3px">เสียบหรือแตะบัตรที่เครื่อง EDC</div></div>`;
+    } else {
+      pd.innerHTML=`<div class="qr-box" style="padding:18px"><div class="bi-ic" style="width:42px;height:42px;border-radius:12px;background:#f5a62322;color:#b9791a;margin:0 auto 8px">${svg('tag')}</div><div style="font-size:13px;font-weight:600">ตัดจากคอร์ส / แพ็กเกจ</div><div style="font-size:11px;color:var(--ink-3);margin-top:3px">${state.cust||'ลูกค้า'} · คงเหลือ 4 ครั้ง</div></div>`;
+    }
+    // charge button
+    const btn=document.getElementById('chargeBtn');
+    btn.disabled=!state.cart.length;
+    btn.innerHTML=`${svg('check')} รับชำระเงิน ฿ ${fmt(t.total)}`;
+  }
+
+  window.charge=async function(){
+    if(!state.cart.length)return;
+    if(!state.custId){BS.toast('เลือกลูกค้าก่อนชำระเงิน','x');return;}
+    const t=totals();
+    const methodName={cash:'เงินสด',promptpay:'พร้อมเพย์ QR',card:'บัตรเครดิต/เดบิต'}[state.method];
+    const methodCode={cash:0,promptpay:2,card:3}[state.method];
+    const paid=state.method==='cash'&&state.received?state.received:t.total;
+    if(paid<t.total){BS.toast('รับเงินมาน้อยกว่ายอดสุทธิ','x');return;}
+    const btn=document.getElementById('chargeBtn');btn.disabled=true;btn.innerHTML=svg('clock')+' กำลังบันทึก...';
+    try{
+      // 1) ใช้ walk-in เดิม (โหลดจากคิว) หรือสร้างใหม่
+      let walkInId=state.walkInId;
+      if(!walkInId){
+        const items=[];let so=0;
+        state.cart.forEach(c=>{for(let k=0;k<c.qty;k++)items.push({serviceId:c.id,therapistId:null,roomId:null,sortOrder:so++});});
+        const w=await API.post('/walk-in',{customerId:state.custId,items});
+        walkInId=w.walkInId;
+      }
+      // 2) เริ่ม + เสร็จงาน (จำเป็นก่อนชำระ) — ข้าม error ถ้าสถานะผ่านแล้ว
+      try{await API.patch('/walk-in/'+walkInId+'/start');}catch{}
+      try{await API.patch('/walk-in/'+walkInId+'/complete');}catch{}
+      // 2.5) ตัดคอร์สลูกค้า (redeem) ตามรายการที่เลือกใช้คอร์ส
+      for(const c of state.cart.filter(x=>x.fromCourse&&x.cpId)){for(let k=0;k<c.qty;k++){try{await API.post('/package/redeem/'+c.cpId);}catch(e){}}}
+      // 2.6) นับการใช้คูปอง (+1)
+      if(state.coupon&&state.coupon.code){try{await API.post('/promotion/redeem-coupon/'+encodeURIComponent(state.coupon.code));}catch(e){}}
+      // 3) ชำระเงิน
+      const pay=await API.post('/payment',{walkInId,paymentMethod:methodCode,paidAmount:paid,discountAmount:t.disc});
+      BS.invoice({
+        no:pay.receiptNo||state.no,
+        date:new Date().toLocaleDateString('th-TH',{day:'2-digit',month:'short',year:'numeric'})+' '+new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}),
+        cashier:(API.getUser()&&API.getUser().displayName)||'แคชเชียร์',
+        customer:state.cust||'ลูกค้าทั่วไป',
+        items:state.cart.map(c=>({name:c.name,sub:c.sub,qty:c.qty,price:c.price})),
+        discount:t.disc?{label:state.coupon?state.coupon.code:'ส่วนลด',amount:t.disc}:null,
+        method:methodName,
+        paid:paid
+      });
+      BS.toast('ชำระเงินสำเร็จ · '+(pay.receiptNo||''));
+      newBill();loadQueue();
+    }catch(e){
+      BS.toast('ชำระเงินไม่สำเร็จ: '+e.message,'x');
+      render();
+    }
+  };
+
+  // ---- held bills (พักบิล) ----
+  const held=[];
+  function heldBadge(){const b=document.getElementById('heldN');if(!b)return;b.style.display=held.length?'':'none';b.textContent=held.length}
+  window.holdBill=function(){
+    if(state.cart.length){
+      held.push({cust:state.cust||'ไม่ระบุลูกค้า',custId:state.custId,walkInId:state.walkInId,cart:state.cart.slice(),coupon:state.coupon,no:state.no,
+        sum:state.cart.reduce((s,c)=>s+c.price*c.qty,0)});
+      newBill();heldBadge();
+      BS.toast('พักบิลไว้แล้ว · กดปุ่มพักบิลซ้ำเพื่อเรียกคืน');
+      return;
+    }
+    if(!held.length){BS.toast('ยังไม่มีบิลที่พักไว้ · เพิ่มรายการก่อนแล้วกดพักบิล','x');return}
+    BS.modal({title:'บิลที่พักไว้',sub:held.length+' บิล · แตะเพื่อเรียกคืน',w:440,
+      body:held.map((h,i)=>`<div class="notif" style="cursor:pointer;align-items:center" onclick="resumeBill(${i})">${av(h.cust,38)}<div class="tx" style="margin-left:10px"><div style="font-weight:600">${h.cust} <span class="sub" style="font-weight:400">· #${h.no}</span></div><div class="tm" style="color:var(--ink-2)">${h.cart.length} รายการ · ${fmt(h.sum)} ฿</div></div><span class="badge b-purple" style="margin-left:auto">เรียกคืน</span></div>`).join(''),
+      foot:`<button class="btn btn-ghost" onclick="BS.closeModal()">ปิด</button>`});
+  };
+  window.resumeBill=function(i){
+    const h=held.splice(i,1)[0];
+    state.cart=h.cart;state.cust=h.cust==='ไม่ระบุลูกค้า'?'':h.cust;state.custId=h.custId;state.walkInId=h.walkInId;state.coupon=h.coupon;state.no=h.no;
+    heldBadge();BS.closeModal();render();
+    BS.toast('เรียกบิล #'+h.no+' กลับมาแล้ว');
+  };
+
+  render();
+};
+</script>
+<script src="../assets/api.js?v=2"></script>
+<script src="../assets/shell.js?v=8"></script>
+</body>
+</html>

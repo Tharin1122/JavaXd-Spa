@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 21c-4.5 0-8-2.6-8-6 0 0 2.4.4 4 1.6C10.7 11.7 12 9 12 9s1.3 2.7 4 7.6c1.6-1.2 4-1.6 4-1.6 0 3.4-3.5 6-8 6Z' fill='%236c5ce7'/></svg>">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JavaXd · Logs &amp; กิจกรรม</title>
+<link rel="stylesheet" href="../assets/theme.css?v=1">
+<style>
+.feed{position:relative;padding-left:8px}
+.day-label{font-size:12px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em;margin:18px 0 10px}
+.log{display:flex;gap:14px;padding:13px 0;position:relative}
+.log .li{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;flex:0 0 38px;z-index:2}
+.log .li svg{width:18px;height:18px}
+.log .lb{flex:1;display:flex;align-items:center;gap:10px}
+.log .lb .tx b{font-weight:600}
+.log .lb .meta{font-size:12px;color:var(--ink-3);margin-top:2px}
+.log .tm{margin-left:auto;font-size:12px;color:var(--ink-3);white-space:nowrap}
+.feed::before{content:'';position:absolute;left:26px;top:10px;bottom:10px;width:2px;background:var(--line)}
+</style>
+</head>
+<body data-title="Logs &amp; กิจกรรม">
+
+<template id="page">
+  <div class="page-h">
+    <div class="ttl"><h2>Logs &amp; กิจกรรม</h2><p>บันทึกการทำงานทั้งหมดในระบบ เพื่อความโปร่งใสและตรวจสอบย้อนหลัง</p></div>
+    <div class="sp">
+      <button class="btn btn-ghost btn-sm" data-i2="filter" onclick="logFilter()">ตัวกรอง</button>
+      <button class="btn btn-ghost btn-sm" data-i2="down" onclick="BS.exportModal({title:'ส่งออก Logs',formats:['CSV (.csv)','JSON (.json)']})">ส่งออก</button>
+    </div>
+  </div>
+
+  <div class="grid-4 mb24">
+    <div class="stat"><div class="row1"><div class="ic ic-blue" data-i="logs"></div><span class="tt">กิจกรรมวันนี้</span></div><div class="val">248</div></div>
+    <div class="stat"><div class="row1"><div class="ic ic-green" data-i="cal"></div><span class="tt">การจอง</span></div><div class="val">86</div></div>
+    <div class="stat"><div class="row1"><div class="ic ic-purple" data-i="wallet"></div><span class="tt">ธุรกรรมเงิน</span></div><div class="val">64</div></div>
+    <div class="stat"><div class="row1"><div class="ic ic-orange" data-i="users"></div><span class="tt">ผู้ใช้งานวันนี้</span></div><div class="val">9</div></div>
+  </div>
+
+  <div class="card card-pad">
+    <div class="flex ac g12 wrap" style="margin-bottom:8px">
+      <div class="search" style="max-width:280px;flex:0 0 280px"><input placeholder="ค้นหากิจกรรม / ผู้ใช้"></div>
+      <div class="seg"><button class="on">ทั้งหมด</button><button>การจอง</button><button>การเงิน</button><button>ระบบ</button></div>
+      <div class="flex ac g8" style="font-size:12.5px;color:var(--ink-2)">
+        <span>ตั้งแต่</span><input type="datetime-local" id="lg-from" style="padding:7px 9px;border:1px solid var(--line);border-radius:9px;font-size:12.5px">
+        <span>ถึง</span><input type="datetime-local" id="lg-to" style="padding:7px 9px;border:1px solid var(--line);border-radius:9px;font-size:12.5px">
+        <button class="btn btn-soft btn-sm" onclick="applyLogRange()">กรองช่วงเวลา</button>
+        <button class="btn btn-ghost btn-sm" onclick="clearLogRange()">ล้าง</button>
+      </div>
+    </div>
+    <div class="feed" id="feed"></div>
+  </div>
+</template>
+
+<script>window.BASE='../';window.PAGE='logs';</script>
+<script>if(!localStorage.getItem('th_auth'))location.href=(window.BASE||'')+'login.html';</script>
+<script>
+window.PAGE_INIT=function(){
+  document.querySelectorAll('[data-i]').forEach(e=>{const t=e.textContent.trim();e.innerHTML=svg(e.dataset.i)+(t?'<span>'+t+'</span>':'')});
+  document.querySelectorAll('[data-i2]').forEach(e=>e.insertAdjacentHTML('afterbegin',svg(e.dataset.i2)));
+
+  const iconFor=(et)=>{const t=et||'';
+    if(t.includes('Booking'))return['cal','#3b9bff'];
+    if(t.includes('WalkIn')||t.includes('Queue'))return['flow','#f5a623'];
+    if(t.includes('Payment'))return['wallet','#22b07d'];
+    if(t.includes('Customer'))return['users','#8b7cf0'];
+    if(t.includes('Therapist'))return['badge','#ec5f86'];
+    if(t.includes('User')||t.includes('Role')||t.includes('Setting'))return['gear','#6b7290'];
+    return['logs','#6b7290'];};
+  let LOGS=[]; let Q=''; let CAT='all'; let TOTAL=0;
+  const catOf=(et)=>{const t=et||'';if(/Booking|WalkIn|Queue/.test(t))return'booking';if(/Payment/.test(t))return'finance';return'system';};
+
+  function dayLabel(iso){const d=new Date(iso),now=new Date();const a=new Date(d.getFullYear(),d.getMonth(),d.getDate()),b=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+    const diff=Math.round((b-a)/86400000);if(diff<=0)return 'วันนี้';if(diff===1)return 'เมื่อวาน';return API.fmtDate(iso);}
+
+  function render(){
+    let list=LOGS.slice();
+    if(CAT!=='all')list=list.filter(l=>catOf(l.entityType)===CAT);
+    if(Q){const q=Q.toLowerCase();list=list.filter(l=>((l.description||'')+(l.actorName||'')+(l.entityLabel||'')).toLowerCase().includes(q));}
+    const groups={};const order=[];
+    list.forEach(l=>{const k=dayLabel(l.createdAt);if(!groups[k]){groups[k]=[];order.push(k);}groups[k].push(l);});
+    document.getElementById('feed').innerHTML=order.length?order.map(k=>
+      `<div class="day-label">${k}</div>`+groups[k].map(l=>{const t=iconFor(l.entityType);const actor=l.actorName||'ระบบ';
+        return `<div class="log" style="cursor:pointer" onclick="logDetail('${l.id}')"><div class="li" style="background:${t[1]}22;color:${t[1]}">${svg(t[0])}</div>
+          <div class="lb">${av(actor,30)}<div class="tx"><div>${l.description||l.eventType||''} ${l.entityLabel?'<b>'+l.entityLabel+'</b>':''} <span class="muted" style="font-size:12.5px">· ${actor}</span></div><div class="meta">${l.entityType||''}</div></div></div>
+          <span class="tm">${API.fmtTime(l.createdAt)}</span></div>`}).join('')
+    ).join(''):'<div style="text-align:center;color:var(--ink-3);padding:40px">ยังไม่มีบันทึกกิจกรรม</div>';
+    // โหลดเพิ่มทีละ 100 — ลิมิตการโหลด ไม่ดึงทั้งหมื่นแถวมาทีเดียว
+    if(LOGS.length<TOTAL)document.getElementById('feed').innerHTML+=`<div style="text-align:center;padding:14px"><button class="btn btn-ghost" onclick="loadMoreLogs()">โหลดเพิ่ม (แสดง ${LOGS.length}/${TOTAL})</button></div>`;
+  }
+  let RANGE_FROM='',RANGE_TO='';
+  const rangeQS=()=>(RANGE_FROM?'&dateFrom='+encodeURIComponent(RANGE_FROM):'')+(RANGE_TO?'&dateTo='+encodeURIComponent(RANGE_TO):'');
+  window.loadMoreLogs=async function(){
+    try{const r=await API.get('/timeline?pageSize=100&offset='+LOGS.length+rangeQS());LOGS=LOGS.concat((r&&r.items)||[]);TOTAL=(r&&r.total)||LOGS.length;render();}
+    catch(e){BS.toast('โหลดเพิ่มไม่สำเร็จ','x');}
+  };
+  async function reloadLogs(){
+    try{const r=await API.get('/timeline?pageSize=100'+rangeQS());LOGS=(r&&r.items)||[];TOTAL=(r&&r.total)||LOGS.length;render();}
+    catch(e){BS.toast('โหลดไม่สำเร็จ','x');}
+  }
+  window.applyLogRange=function(){
+    RANGE_FROM=document.getElementById('lg-from').value;RANGE_TO=document.getElementById('lg-to').value;
+    if(RANGE_FROM&&RANGE_TO&&RANGE_FROM>RANGE_TO){BS.toast('ช่วงเวลาไม่ถูกต้อง: "ตั้งแต่" ต้องมาก่อน "ถึง"','x');return;}
+    reloadLogs();BS.toast(RANGE_FROM||RANGE_TO?'กรองช่วงเวลาแล้ว':'แสดงทั้งหมด');
+  };
+  window.clearLogRange=function(){RANGE_FROM='';RANGE_TO='';document.getElementById('lg-from').value='';document.getElementById('lg-to').value='';reloadLogs();BS.toast('แสดงทั้งหมด');};
+  function hrefFor(et){const t=et||'';if(t.includes('Booking'))return'bookings.html';if(t.includes('WalkIn')||t.includes('Queue'))return'bookings.html#queue';if(t.includes('Payment'))return'finance.html';if(t.includes('Customer'))return'customers.html';if(t.includes('Therapist'))return'staff.html';if(t.includes('User')||t.includes('Role')||t.includes('Setting'))return'roles.html';return'';}
+  window.logDetail=function(id){const l=LOGS.find(x=>x.id===id);if(!l)return;const href=hrefFor(l.entityType);const t=iconFor(l.entityType);
+    BS.modal({title:'รายละเอียดกิจกรรม',sub:l.entityType||'',w:440,
+      body:`<div class="flex ac g12" style="margin-bottom:14px"><span style="width:42px;height:42px;border-radius:12px;background:${t[1]}22;color:${t[1]};display:grid;place-items:center;flex:0 0 42px">${svg(t[0])}</span><div style="flex:1"><div style="font-weight:700;font-size:15px">${l.description||l.eventType||''}</div><div class="sub" style="font-size:12.5px">${l.actorName||'ระบบ'} · ${API.fmtTime(l.createdAt)} ${API.fmtDate(l.createdAt)}</div></div></div>
+        ${l.entityLabel?`<div style="background:var(--card-2);border:1px solid var(--line);border-radius:12px;padding:12px 15px"><span class="sub" style="font-size:11px">รายการอ้างอิง</span><div style="font-weight:600">${l.entityLabel}</div></div>`:''}`,
+      foot:`<button class="btn btn-ghost" onclick="BS.closeModal()">ปิด</button>${href?`<a class="btn btn-pri" href="${href}" style="text-decoration:none">${svg('chevR')} ไปดูหน้าที่เกี่ยวข้อง</a>`:''}`});
+  };
+
+  (async()=>{
+    try{const r=await API.get('/timeline?pageSize=100');LOGS=(r&&r.items)||[];TOTAL=(r&&r.total)||LOGS.length;render();
+      // stat cards
+      const today=new Date();const isToday=(iso)=>{const d=new Date(iso);return d.toDateString()===today.toDateString();};
+      const tlist=LOGS.filter(l=>isToday(l.createdAt));
+      const v=document.querySelectorAll('.grid-4 .val');
+      if(v[0])v[0].textContent=tlist.length;
+      if(v[1])v[1].textContent=tlist.filter(l=>(l.entityType||'').match(/Booking|WalkIn|Queue/)).length;
+      if(v[2])v[2].textContent=tlist.filter(l=>(l.entityType||'').includes('Payment')).length;
+      if(v[3])v[3].textContent=new Set(tlist.map(l=>l.actorName).filter(Boolean)).size;
+      // การ์ดคลิกดูรายละเอียดได้ (reuse modal เดียวกับหน้าอื่น)
+      const bkList=tlist.filter(l=>(l.entityType||'').match(/Booking|WalkIn|Queue/));
+      const fiList=tlist.filter(l=>(l.entityType||'').includes('Payment'));
+      const actors=[...new Set(tlist.map(l=>l.actorName).filter(Boolean))];
+      const byCat={};tlist.forEach(l=>{const c=catOf(l.entityType);byCat[c]=(byCat[c]||0)+1;});
+      const evRows=(list)=>list.slice(0,10).map(l=>[`${API.fmtTime(l.createdAt)} · ${(l.description||l.eventType||'').slice(0,38)}`,l.actorName||'ระบบ']);
+      const defs=[
+        {title:'กิจกรรมวันนี้ · '+tlist.length+' รายการ',sub:'แยกตามหมวด',rows:[['การจอง & คิว',byCat.booking||0],['การเงิน',byCat.finance||0],['ระบบ / อื่นๆ',byCat.system||0]]},
+        {title:'การจอง & คิววันนี้ · '+bkList.length,sub:'10 รายการล่าสุด',rows:evRows(bkList).length?evRows(bkList):[['ยังไม่มีรายการ','—']]},
+        {title:'ธุรกรรมเงินวันนี้ · '+fiList.length,sub:'10 รายการล่าสุด',rows:evRows(fiList).length?evRows(fiList):[['ยังไม่มีรายการ','—']]},
+        {title:'ผู้ใช้งานวันนี้ · '+actors.length+' คน',sub:'ใครทำอะไรกี่ครั้ง',rows:actors.map(a=>[a,tlist.filter(l=>l.actorName===a).length+' ครั้ง'])},
+      ];
+      document.querySelectorAll('.grid-4 .stat').forEach((el,i)=>{const d=defs[i];if(!d)return;
+        el.style.cursor='pointer';el.title='คลิกดูรายละเอียด';
+        el.onclick=()=>BS.modal({title:d.title,sub:d.sub,w:440,body:d.rows.map(r=>BS.statRow(r[0],r[1])).join(''),foot:'<button class="btn btn-pri" onclick="BS.closeModal()">ปิด</button>'});});
+    }catch(e){console.error('logs',e);document.getElementById('feed').innerHTML='<div style="text-align:center;color:var(--red);padding:40px">โหลดบันทึกกิจกรรมไม่สำเร็จ</div>';}
+  })();
+
+  const si=document.querySelector('.search input');if(si)si.addEventListener('input',e=>{Q=e.target.value;render();});
+
+  // เซ็กเมนต์ ทั้งหมด/การจอง/การเงิน/ระบบ — กรองจริงตามหมวด
+  const segMap=['all','booking','finance','system'];
+  document.querySelectorAll('.seg button').forEach((b,i)=>b.onclick=()=>{
+    document.querySelectorAll('.seg button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+    CAT=segMap[i];render();
+  });
+
+  // ตัวกรองผู้ใช้งาน (ดึงรายชื่อ actor จริงจาก logs)
+  let ACTOR='';
+  window.logFilter=function(){
+    const actors=[...new Set(LOGS.map(l=>l.actorName).filter(Boolean))];
+    BS.modal({title:'ตัวกรอง Logs',sub:'กรองตามผู้ใช้งานที่ทำรายการ',w:380,
+      body:`<div class="field"><label>ผู้ใช้งาน</label><select id="flUser"><option value="">ทุกคน</option>${actors.map(a=>`<option ${a===ACTOR?'selected':''}>${a}</option>`).join('')}</select></div>
+        <div class="sub" style="font-size:12px">หมวดเหตุการณ์เลือกได้จากแท็บด้านบน (ทั้งหมด / การจอง / การเงิน / ระบบ)</div>`,
+      foot:`<button class="btn btn-ghost" onclick="document.getElementById('flUser').value='';">ล้าง</button><button class="btn btn-pri" onclick="window._applyLogFilter()">${svg('check')} ใช้ตัวกรอง</button>`});
+  };
+  window._applyLogFilter=function(){ACTOR=document.getElementById('flUser').value;Q=ACTOR;const si2=document.querySelector('.search input');if(si2)si2.value=ACTOR;render();BS.closeModal();BS.toast(ACTOR?'กรองผู้ใช้: '+ACTOR:'แสดงทั้งหมด');};
+};
+</script>
+<script src="../assets/api.js?v=2"></script>
+<script src="../assets/shell.js?v=8"></script>
+</body>
+</html>

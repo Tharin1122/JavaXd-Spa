@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 21c-4.5 0-8-2.6-8-6 0 0 2.4.4 4 1.6C10.7 11.7 12 9 12 9s1.3 2.7 4 7.6c1.6-1.2 4-1.6 4-1.6 0 3.4-3.5 6-8 6Z' fill='%236c5ce7'/></svg>">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JavaXd · บริการ &amp; คอร์ส</title>
+<link rel="stylesheet" href="../assets/theme.css?v=1">
+<style>
+.sv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+@media(max-width:1100px){.sv-grid{grid-template-columns:repeat(2,1fr)}}
+.svc{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);overflow:hidden;transition:.15s}
+.svc:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg)}
+.svc-top{height:96px;display:flex;align-items:center;justify-content:center;position:relative}
+.svc-top .ic{width:52px;height:52px;border-radius:15px;background:rgba(255,255,255,.85);display:grid;place-items:center}
+.svc-top .ic svg{width:26px;height:26px}
+.svc-top .av-flag{position:absolute;top:12px;right:12px}
+.svc-b{padding:16px 18px}
+.svc-b h4{font-size:16px;font-weight:600;margin-bottom:4px}
+.svc-b .desc{font-size:12.5px;color:var(--ink-3);min-height:34px}
+.dur-row{display:flex;gap:8px;margin:12px 0 14px;flex-wrap:wrap}
+.dur{flex:1;min-width:84px;border:1px solid var(--line-2);border-radius:11px;padding:9px;text-align:center}
+.dur .t{font-size:11px;color:var(--ink-3)}.dur .p{font-weight:700;font-size:15px;margin-top:2px}
+.course-card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:18px;display:flex;flex-direction:column;gap:12px}
+.course-card.feat{border:1.5px solid var(--brand);position:relative}
+.feat-tag{position:absolute;top:-11px;left:18px;background:var(--brand-grad);color:#fff;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px}
+</style>
+</head>
+<body data-title="บริการ &amp; คอร์ส">
+
+<template id="page">
+  <div class="page-h">
+    <div class="ttl"><h2>บริการ &amp; คอร์ส</h2><p>จัดการรายการนวด คอร์สแพ็กเกจ และราคา</p></div>
+    <div class="sp"><button class="btn btn-pri" onclick="addService()" data-i="plus">เพิ่มบริการ</button></div>
+  </div>
+
+  <h3 style="font-size:16px;font-weight:700;margin-bottom:16px">รายการบริการนวด</h3>
+  <div class="sv-grid" id="sv-grid" style="margin-bottom:34px"></div>
+
+  <div class="flex ac jb" style="margin-bottom:16px">
+    <h3 style="font-size:16px;font-weight:700">คอร์ส &amp; แพ็กเกจ (ซื้อล่วงหน้า)</h3>
+    <button class="btn btn-ghost btn-sm" onclick="newCourse()" data-i2="plus">สร้างคอร์ส</button>
+  </div>
+  <div class="grid-3" id="course-grid"></div>
+</template>
+
+<script>window.BASE='../';window.PAGE='services';</script>
+<script>if(!localStorage.getItem('th_auth'))location.href=(window.BASE||'')+'login.html';</script>
+<script>
+window.PAGE_INIT=function(){
+  document.querySelectorAll('[data-i]').forEach(e=>{const t=e.textContent.trim();e.innerHTML=svg(e.dataset.i)+(t?'<span>'+t+'</span>':'')});
+  document.querySelectorAll('[data-i2]').forEach(e=>e.insertAdjacentHTML('afterbegin',svg(e.dataset.i2)));
+
+  let SERVICES=[]; let CATS=[];
+  const colorFor=(name)=>{const n=name||'';
+    if(n.includes('อโรมา'))return['#e6a23c','#fcf2e0'];
+    if(n.includes('น้ำมัน'))return['#3ea8c9','#e6f4f9'];
+    if(n.includes('ประคบ'))return['#7cc47a','#e9f6e8'];
+    if(n.includes('เท้า'))return['#f08aa8','#fdeaf0'];
+    if(n.includes('คอ')||n.includes('บ่า')||n.includes('ไหล่'))return['#f0b07a','#fdf0e2'];
+    return['#8b7cf0','#efeafe'];};
+
+  function render(){
+    // group services by category
+    const groups={};
+    SERVICES.forEach(s=>{const cn=(s.category&&s.category.name)||'อื่นๆ';(groups[cn]=groups[cn]||[]).push(s);});
+    const grid=document.getElementById('sv-grid');
+    const keys=Object.keys(groups);
+    grid.innerHTML=keys.length?keys.map(cn=>{const list=groups[cn];const col=colorFor(cn);
+      return `<div class="svc">
+        <div class="svc-top" style="background:${col[1]}"><div class="ic" style="color:${col[0]}">${svg('spa')}</div>
+          <span class="badge b-gray av-flag">${list.length} รายการ</span></div>
+        <div class="svc-b">
+          <h4>${cn}</h4><div class="desc">${list.map(s=>s.name).join(' · ')}</div>
+          <div class="dur-row">${list.map(s=>`<div class="dur" style="cursor:pointer" title="กดเพื่อแก้ไขเวลา/ราคา หรือลบ" onclick="editService('${s.id}')"><div class="t">${s.durationMins} น. ✎</div><div class="p">${fmt(s.price)} ฿</div></div>`).join('')}</div>
+          <div class="sub" style="font-size:11px;color:var(--ink-3)">กดที่ช่วงเวลาเพื่อแก้ไขราคา/เวลา หรือลบ</div>
+        </div>
+      </div>`}).join(''):'<div style="color:var(--ink-3);padding:30px">ยังไม่มีบริการ — กดเพิ่มบริการ</div>';
+
+    renderCourses();
+  }
+  window.svRender=render;
+
+  // ===== คอร์ส / แพ็กเกจ (ซื้อล่วงหน้าเป็นครั้ง) จาก /package จริง =====
+  let PACKAGES=[];
+  function renderCourses(){
+    const grid=document.getElementById('course-grid');
+    grid.innerHTML=PACKAGES.length?PACKAGES.map(c=>{const save=c.originalPrice&&c.originalPrice>c.price?('ประหยัด '+fmt(c.originalPrice-c.price)+' ฿'):(c.totalSessions+' ครั้ง');
+      return `<div class="course-card${c.isFeatured?' feat':''}">${c.isFeatured?'<span class="feat-tag">⭐ แนะนำ</span>':''}
+        <div class="flex ac jb"><div class="ic" style="width:42px;height:42px;border-radius:12px;background:var(--brand-soft);color:var(--brand);display:grid;place-items:center">${svg('tag')}</div>
+          <span class="badge b-green">ขายแล้ว ${c.soldCount||0}</span></div>
+        <div><h4 style="font-size:16px;font-weight:600;cursor:pointer" onclick="editCourse('${c.id}')">${c.name}</h4><p class="sub" style="font-size:12.5px;margin-top:3px">${c.description||(c.totalSessions+' ครั้ง'+(c.validityDays?' · อายุ '+c.validityDays+' วัน':' · ไม่มีหมดอายุ'))}</p></div>
+        <div class="flex ac g8" style="margin-top:auto"><span style="font-size:24px;font-weight:700">${fmt(c.price)} ฿</span>${c.originalPrice&&c.originalPrice>c.price?`<span style="text-decoration:line-through;color:var(--ink-3);font-size:13px">${fmt(c.originalPrice)}</span>`:''}<span class="badge b-orange" style="margin-left:auto">${save}</span></div>
+        <button class="btn ${c.isFeatured?'btn-pri':'btn-soft'}" onclick="sellCourse('${c.id}')">${svg('receipt')} ขายคอร์สนี้</button>
+      </div>`}).join(''):'<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--ink-3);background:var(--card-2);border:1px dashed var(--line);border-radius:14px">ยังไม่มีคอร์ส / แพ็กเกจ — กด "สร้างคอร์ส" เพื่อเพิ่ม</div>';
+  }
+  async function loadCourses(){try{PACKAGES=await API.get('/package')||[];renderCourses();}catch(e){console.error('packages',e);}}
+  loadCourses();
+
+  async function load(){
+    try{
+      [SERVICES,CATS]=await Promise.all([API.get('/services'),API.get('/service-categories')]);
+      SERVICES=SERVICES||[];CATS=CATS||[];render();
+    }catch(e){console.error('services',e);document.getElementById('sv-grid').innerHTML='<div style="color:var(--red);padding:30px">โหลดบริการไม่สำเร็จ</div>';}
+  }
+  load();
+
+  function catOptions(sel){return CATS.map(c=>`<option value="${c.id}" ${c.id===sel?'selected':''}>${c.name}</option>`).join('');}
+  function svForm(s){
+    return `<div class="field"><label>ชื่อบริการ</label><input id="sf-name" value="${s?(s.name||'').replace(/"/g,'&quot;'):''}" placeholder="เช่น นวดไทย 60 นาที"></div>
+      <div class="field"><label>หมวดหมู่</label><select id="sf-cat">${catOptions(s&&s.category&&s.category.id)}</select></div>
+      <div class="grid2"><div class="field"><label>ระยะเวลา (นาที)</label><input id="sf-dur" type="number" value="${s?s.durationMins:60}"></div>
+        <div class="field"><label>ราคา (บาท)</label><input id="sf-price" type="number" value="${s?s.price:''}" placeholder="350"></div></div>
+      <div class="field"><label>ค่าคอมมิชชันหมอนวด <span class="sub" style="font-weight:400;font-size:11.5px">· เลือกแบบ % ของราคา หรือจำนวนเงินคงที่ (ใช้คำนวณค่ามือหมอนวดอัตโนมัติ)</span></label>
+        <div class="grid2"><div><input id="sf-comr" type="number" step="0.1" value="${s&&s.commissionRate!=null?s.commissionRate:''}" placeholder="% เช่น 40"></div>
+          <div><input id="sf-comf" type="number" value="${s&&s.commissionFixed!=null?s.commissionFixed:''}" placeholder="หรือ ฿ คงที่ เช่น 150"></div></div></div>`;
+  }
+  async function saveService(id){
+    const name=document.getElementById('sf-name').value.trim();
+    const catId=document.getElementById('sf-cat').value;
+    const dur=parseInt(document.getElementById('sf-dur').value)||60;
+    const price=parseFloat(document.getElementById('sf-price').value)||0;
+    const comr=parseFloat(document.getElementById('sf-comr').value);
+    const comf=parseFloat(document.getElementById('sf-comf').value);
+    if(!name||!catId){BS.toast('กรอกชื่อและหมวดหมู่','x');return;}
+    const body={categoryId:catId,name,durationMins:dur,bufferMins:0,price,requiredRoomType:null,commissionRate:isNaN(comr)?null:comr,commissionFixed:isNaN(comf)?null:comf,branchId:null,isActive:true};
+    try{ if(id)await API.put('/services/'+id,body); else await API.post('/services',body);
+      BS.closeModal();BS.toast(id?'บันทึกบริการแล้ว':'เพิ่มบริการใหม่แล้ว');await load();
+    }catch(e){BS.toast('บันทึกไม่สำเร็จ: '+e.message,'x');}
+  }
+  // เพิ่มบริการ: กรอกได้หลายช่วงเวลา-ราคาในครั้งเดียว (เช่น 60 นาที 350฿ + 180 นาที 900฿)
+  window._svAddRow=function(){
+    document.getElementById('sf-rows').insertAdjacentHTML('beforeend',
+      `<div class="grid2 sf-row" style="margin-bottom:8px;position:relative">
+        <div><input type="number" class="sf-r-dur" placeholder="นาที เช่น 90"></div>
+        <div style="display:flex;gap:6px"><input type="number" class="sf-r-price" placeholder="ราคา ฿" style="flex:1">
+          <button class="btn btn-ghost btn-sm" style="color:var(--red);padding:6px 10px" onclick="this.closest('.sf-row').remove()" title="ลบช่วงนี้">✕</button></div>
+      </div>`);
+  };
+  window.addService=function(){
+    if(!CATS.length){BS.toast('ยังไม่มีหมวดหมู่บริการ','x');return;}
+    BS.modal({title:'เพิ่มบริการใหม่',sub:'หนึ่งบริการตั้งได้หลายช่วงเวลา-ราคา · กด "+ เพิ่มช่วงเวลา"',w:540,
+      body:`<div class="field"><label>ชื่อบริการ</label><input id="sf-name" placeholder="เช่น นวดเท้า"></div>
+        <div class="field"><label>หมวดหมู่</label><select id="sf-cat">${catOptions(null)}</select></div>
+        <div class="field"><label>ช่วงเวลา & ราคา <span class="sub" style="font-weight:400;font-size:11.5px">· เพิ่มได้หลายช่วง เช่น 60 นาที / 180 นาที</span></label>
+          <div class="grid2" style="margin-bottom:6px"><div class="sub" style="font-size:11.5px">ระยะเวลา (นาที)</div><div class="sub" style="font-size:11.5px">ราคา (บาท)</div></div>
+          <div id="sf-rows">
+            <div class="grid2 sf-row" style="margin-bottom:8px">
+              <div><input type="number" class="sf-r-dur" value="60"></div>
+              <div><input type="number" class="sf-r-price" placeholder="350"></div>
+            </div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="window._svAddRow()">+ เพิ่มช่วงเวลา</button></div>
+        <div class="field"><label>ค่าคอมมิชชันหมอนวด <span class="sub" style="font-weight:400;font-size:11.5px">· % ของราคา หรือ ฿ คงที่ (ใช้ทุกช่วงเวลา)</span></label>
+          <div class="grid2"><div><input id="sf-comr" type="number" step="0.1" placeholder="% เช่น 40"></div>
+            <div><input id="sf-comf" type="number" placeholder="หรือ ฿ คงที่ เช่น 150"></div></div></div>`,
+      foot:`<button class="btn btn-ghost" onclick="BS.closeModal()">ยกเลิก</button><button class="btn btn-pri" onclick="window._saveSvMulti()">${svg('check')} บันทึกทุกช่วง</button>`});
+    window._saveSvMulti=async function(){
+      const name=document.getElementById('sf-name').value.trim();
+      const catId=document.getElementById('sf-cat').value;
+      const comr=parseFloat(document.getElementById('sf-comr').value);
+      const comf=parseFloat(document.getElementById('sf-comf').value);
+      const rows=[...document.querySelectorAll('#sf-rows .sf-row')].map(r=>({dur:parseInt(r.querySelector('.sf-r-dur').value)||0,price:parseFloat(r.querySelector('.sf-r-price').value)||0})).filter(r=>r.dur>0&&r.price>0);
+      if(!name||!catId){BS.toast('กรอกชื่อและหมวดหมู่','x');return;}
+      if(!rows.length){BS.toast('กรอกอย่างน้อย 1 ช่วงเวลา-ราคา (ทั้งนาทีและราคาต้องมากกว่า 0)','x');return;}
+      try{
+        for(const r of rows){
+          const nm=rows.length>1?`${name} ${r.dur} นาที`:name;
+          await API.post('/services',{categoryId:catId,name:nm,durationMins:r.dur,bufferMins:0,price:r.price,requiredRoomType:null,commissionRate:isNaN(comr)?null:comr,commissionFixed:isNaN(comf)?null:comf,branchId:null,isActive:true});
+        }
+        BS.closeModal();BS.toast('เพิ่มบริการ '+rows.length+' ช่วงเวลาแล้ว');await load();
+      }catch(e){BS.toast('บันทึกไม่สำเร็จ: '+e.message,'x');}
+    };
+  };
+  window.editService=function(id){
+    const s=SERVICES.find(x=>x.id===id);if(!s)return;
+    BS.modal({title:'แก้ไขบริการ · '+s.name,sub:'ปรับชื่อ หมวดหมู่ ระยะเวลา หรือราคา',w:520,body:svForm(s),
+      foot:`<button class="btn btn-ghost" style="color:var(--red);border-color:#f4ccd0;margin-right:auto" onclick="window._delSv('${id}')">${svg('trash')} ลบ</button><button class="btn btn-ghost" onclick="BS.closeModal()">ยกเลิก</button><button class="btn btn-pri" onclick="window._saveSv()">${svg('check')} บันทึก</button>`});
+    window._saveSv=()=>saveService(id);
+    window._delSv=async(sid)=>{try{await API.del('/services/'+sid);BS.closeModal();BS.toast('ลบบริการแล้ว');await load();}catch(e){BS.toast('ลบไม่สำเร็จ','x');}};
+  };
+  function courseForm(c){c=c||{};
+    return `<div class="field"><label>ชื่อคอร์ส</label><input id="co-name" value="${(c.name||'').replace(/"/g,'&quot;')}" placeholder="เช่น คอร์สนวดน้ำมัน 10 ครั้ง"></div>
+      <div class="field"><label>คำอธิบาย</label><input id="co-desc" value="${(c.description||'').replace(/"/g,'&quot;')}" placeholder="เช่น ใช้ได้ทุกสาขา"></div>
+      <div class="grid2"><div class="field"><label>จำนวนครั้ง</label><input id="co-sessions" type="number" value="${c.totalSessions||10}"></div>
+        <div class="field"><label>อายุคอร์ส (วัน)</label><input id="co-valid" type="number" value="${c.validityDays||''}" placeholder="ว่าง = ไม่มีหมดอายุ"></div></div>
+      <div class="grid2"><div class="field"><label>ราคาขาย (บาท)</label><input id="co-price" type="number" value="${c.price||''}" placeholder="5850"></div>
+        <div class="field"><label>ราคาปกติ (ก่อนลด)</label><input id="co-orig" type="number" value="${c.originalPrice||''}" placeholder="6500"></div></div>
+      <label class="flex ac g8" style="margin-top:4px;cursor:pointer"><input id="co-feat" type="checkbox" ${c.isFeatured?'checked':''} style="width:16px;height:16px;accent-color:var(--brand)"><span style="font-size:13px">ตั้งเป็นคอร์สแนะนำ (⭐)</span></label>`;}
+  function readCourse(){return {name:document.getElementById('co-name').value.trim(),description:document.getElementById('co-desc').value.trim()||null,
+    totalSessions:parseInt(document.getElementById('co-sessions').value)||1,validityDays:parseInt(document.getElementById('co-valid').value)||null,
+    price:parseFloat(document.getElementById('co-price').value)||0,originalPrice:parseFloat(document.getElementById('co-orig').value)||null,
+    applicableServices:null,isFeatured:document.getElementById('co-feat').checked};}
+  async function saveCourse(id){const b=readCourse();if(!b.name){BS.toast('กรอกชื่อคอร์ส','x');return;}
+    try{if(id)await API.put('/package/'+id,b);else await API.post('/package',b);BS.closeModal();BS.toast(id?'บันทึกคอร์สแล้ว':'สร้างคอร์สใหม่แล้ว');await loadCourses();}catch(e){BS.toast('ไม่สำเร็จ: '+e.message,'x');}}
+  window.newCourse=function(){BS.modal({title:'สร้างคอร์ส / แพ็กเกจ',sub:'ตั้งคอร์สแบบซื้อล่วงหน้าให้ลูกค้า',w:520,body:courseForm(),
+    foot:`<button class="btn btn-ghost" onclick="BS.closeModal()">ยกเลิก</button><button class="btn btn-pri" onclick="window._saveCo()">${svg('check')} บันทึกคอร์ส</button>`});window._saveCo=()=>saveCourse(null);};
+  window.editCourse=function(id){const c=PACKAGES.find(x=>x.id===id);if(!c)return;
+    BS.modal({title:'แก้ไขคอร์ส · '+c.name,w:520,body:courseForm(c),
+      foot:`<button class="btn btn-ghost" style="color:var(--red);border-color:#f4ccd0;margin-right:auto" onclick="window._delCo('${id}')">${svg('trash')} ลบ</button><button class="btn btn-ghost" onclick="BS.closeModal()">ยกเลิก</button><button class="btn btn-pri" onclick="window._saveCo()">${svg('check')} บันทึก</button>`});
+    window._saveCo=()=>saveCourse(id);window._delCo=async(cid)=>{try{await API.del('/package/'+cid);BS.closeModal();BS.toast('ลบคอร์สแล้ว');await loadCourses();}catch(e){BS.toast('ลบไม่สำเร็จ','x');}};};
+
+  // ขายคอร์ส → เลือกลูกค้าจริง (ค้นหา) + ช่องทางชำระ → POST sell (ออกใบเสร็จจริง)
+  let SELL_CUST=null;
+  window.sellCourse=function(id){const c=PACKAGES.find(x=>x.id===id);if(!c)return;SELL_CUST=null;
+    BS.modal({title:'ขายคอร์ส · '+c.name,sub:'เลือกลูกค้าและออกใบเสร็จคอร์สล่วงหน้า',w:480,
+      body:`<div style="display:flex;align-items:center;gap:13px;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--card-2);margin-bottom:16px">
+          <div style="width:42px;height:42px;border-radius:12px;background:var(--brand-soft);color:var(--brand);display:grid;place-items:center">${svg('tag')}</div>
+          <div style="flex:1"><div style="font-weight:700">${c.name}</div><div class="sub" style="font-size:12px">${c.totalSessions} ครั้ง${c.validityDays?' · อายุ '+c.validityDays+' วัน':''}</div></div>
+          <div style="font-weight:700;font-size:16px">${fmt(c.price)} ฿</div></div>
+        <div class="field"><label>ลูกค้า</label><input id="sell-cust" placeholder="ค้นหาชื่อ / เบอร์โทร" autocomplete="off"><div id="sell-res" style="margin-top:4px"></div></div>
+        <div class="field"><label>ช่องทางชำระ</label><div class="seg-full" id="sell-pay"><button class="on" data-m="Cash">เงินสด</button><button data-m="QR">พร้อมเพย์</button><button data-m="Card">บัตร</button></div></div>`,
+      foot:`<button class="btn btn-ghost" onclick="BS.closeModal()">ยกเลิก</button><button class="btn btn-pri" onclick="window._doSell('${id}')">${svg('receipt')} ขาย & ออกใบเสร็จ</button>`});
+    setTimeout(()=>{document.querySelectorAll('#sell-pay button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#sell-pay button').forEach(x=>x.classList.remove('on'));b.classList.add('on');});
+      const si=document.getElementById('sell-cust');let tmr;si.addEventListener('input',e=>{clearTimeout(tmr);const q=e.target.value.trim();SELL_CUST=null;
+        if(q.length<2){document.getElementById('sell-res').innerHTML='';return;}
+        tmr=setTimeout(async()=>{try{const r=await API.get('/customer?search='+encodeURIComponent(q)+'&pageSize=6');const items=(r&&r.items)||[];
+          document.getElementById('sell-res').innerHTML=items.length?items.map(c2=>`<div class="flex ac g8" style="padding:8px;border:1px solid var(--line);border-radius:9px;margin-top:4px;cursor:pointer" onclick="window._pickCust('${c2.id}','${(c2.displayName||'').replace(/'/g,'')}','${c2.phone||''}')">${av(c2.displayName,28)}<div><div style="font-weight:600;font-size:13px">${c2.displayName}</div><div class="sub" style="font-size:11px">${c2.phone||''}</div></div></div>`).join(''):'<div class="sub" style="font-size:12px;padding:6px 0">ไม่พบลูกค้า — เพิ่มในหน้าลูกค้าก่อน</div>';
+        }catch(e){}},250);});},40);};
+  window._pickCust=function(id,name,phone){SELL_CUST={id,name};document.getElementById('sell-cust').value=name+(phone?' ('+phone+')':'');document.getElementById('sell-res').innerHTML='<div style="color:#178a61;font-size:12px;padding:4px 0">✓ เลือก '+name+'</div>';};
+  window._doSell=async function(id){if(!SELL_CUST){BS.toast('เลือกลูกค้าก่อน','x');return;}
+    const m=(document.querySelector('#sell-pay button.on')||{}).dataset?.m||'Cash';
+    try{const r=await API.post('/package/'+id+'/sell',{customerId:SELL_CUST.id,paymentMethod:m});
+      BS.closeModal();BS.toast('ขายคอร์สให้ '+SELL_CUST.name+' แล้ว · '+(r.receiptNo||''),'check');await loadCourses();
+    }catch(e){BS.toast('ขายไม่สำเร็จ: '+e.message,'x');}};
+};
+</script>
+<script src="../assets/api.js?v=2"></script>
+<script src="../assets/shell.js?v=8"></script>
+</body>
+</html>
