@@ -103,14 +103,17 @@ def seed_showcase(db: Session) -> None:
     today = now.strftime("%Y-%m-%d")
     rcpt = 1
 
-    # ---- ประวัติ 7 วันก่อนหน้า: คิวจบ+ชำระจริง (การเงิน/รายงานมียอด) ----
-    for back in range(7, 0, -1):
-        day = now - timedelta(days=back)
-        hours = random.sample(range(10, 20), 4)
-        for i, h in enumerate(hours):
-            c, s, t = random.choice(custs), random.choice(svcs), ths[(back + i) % len(ths)]
-            start = day.replace(hour=h, minute=0, second=0, microsecond=0)
-            w = WalkIn(queue_no=f"H{back}{i:02d}", customer_id=c.id, status=2, paid=True,
+    # ---- ประวัติทั้งเดือน (วันที่ 1 → เมื่อวาน): คิวจบ+ชำระจริง (การเงิน/รายงานมียอดเต็มเดือน) ----
+    month_first = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    day = month_first
+    dnum = 0
+    while day.date() < now.date():
+        dnum += 1
+        hours = random.sample(range(10, 20), random.randint(3, 5))
+        for i, h in enumerate(sorted(hours)):
+            c, s, t = random.choice(custs), random.choice(svcs), ths[(dnum + i) % len(ths)]
+            start = day.replace(hour=h, minute=0)
+            w = WalkIn(queue_no=f"H{dnum:02d}{i:02d}", customer_id=c.id, status=2, paid=True,
                        arrival_time=start - timedelta(minutes=10), start_time=start,
                        end_time=start + timedelta(minutes=s.duration_mins))
             w.items.append(WalkInItem(service_id=s.id, therapist_id=t.id, sort_order=0, price=s.price))
@@ -125,6 +128,7 @@ def seed_showcase(db: Session) -> None:
             rcpt += 1
             c.total_visits = (c.total_visits or 0) + 1
             c.total_spent = (c.total_spent or 0) + s.price
+        day += timedelta(days=1)
 
     # ---- วันนี้: จบแล้ว 2 / กำลังบริการ 1 / รอคิว 2 (กระดานคิวมีของให้เล่น) ----
     base = now.replace(minute=0, second=0, microsecond=0)
@@ -152,15 +156,35 @@ def seed_showcase(db: Session) -> None:
             db.add(p)
             rcpt += 1
 
-    # ---- นัดล่วงหน้า วันนี้+พรุ่งนี้ (ตาราง gantt/การจองมีบล็อก) ----
-    tomorrow = (now + timedelta(days=1)).strftime("%Y-%m-%d")
-    bk_plan = [(today, 18), (today, 19), (tomorrow, 11), (tomorrow, 14), (tomorrow, 16)]
-    for i, (d, h) in enumerate(bk_plan):
-        c, s, t = custs[(i + 2) % len(custs)], svcs[(i + 1) % len(svcs)], ths[(i + 1) % len(ths)]
-        b = Booking(booking_no=f"B-{2401 + i}", customer_id=c.id, status=1,
-                    booking_date=d, start_time=f"{h:02d}:00:00")
-        b.items.append(BookingItem(service_id=s.id, therapist_id=t.id,
-                                   therapist_selection_mode=0, sort_order=0, price=s.price))
-        db.add(b)
+    # ---- นัดล่วงหน้า: วันนี้ → วันที่ 30 ของเดือน (2-4 นัด/วัน จัดช่องต่อหมอไม่ให้ชนกัน) ----
+    bno = 2401
+    fut = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    last_day = 30
+    while fut.day <= last_day and fut.month == now.month:
+        d = fut.strftime("%Y-%m-%d")
+        free = {t.id: list(range(10, 21)) for t in ths}
+        n_bk = random.randint(2, 4)
+        for _ in range(n_bk):
+            c, s, t = random.choice(custs), random.choice(svcs), random.choice(ths)
+            need = max(1, round(s.duration_mins / 60))
+            slots = free[t.id]
+            got = None
+            for j in range(len(slots) - need + 1):
+                if all(slots[j] + k == slots[j + k] for k in range(need)):
+                    got = slots[j]
+                    for k in range(need):
+                        slots.remove(got + k)
+                    break
+            if got is None:
+                continue
+            if d == today and got <= now.hour:  # วันนี้ห้ามนัดย้อนเวลา
+                continue
+            b = Booking(booking_no=f"B-{bno}", customer_id=c.id, status=1,
+                        booking_date=d, start_time=f"{got:02d}:00:00")
+            b.items.append(BookingItem(service_id=s.id, therapist_id=t.id,
+                                       therapist_selection_mode=0, sort_order=0, price=s.price))
+            db.add(b)
+            bno += 1
+        fut += timedelta(days=1)
 
     db.commit()
