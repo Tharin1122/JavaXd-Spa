@@ -710,27 +710,30 @@ if(window.PAGE_INIT)window.PAGE_INIT();
       setTimeout(()=>location.href=(window.BASE||'')+home,1500);
       refreshCapsCache();return;
     }
-    // 2) ลิงก์/ปุ่มลัดที่พาไปหน้าที่ไม่มีสิทธิ์ → ฉีด CSS ซ่อนทันที (ก่อน paint)
+    // ===== ซ่อนทุกอย่างด้วย CSS ล้วน (มีผลก่อน paint + ครอบคลุม modal ที่เปิดทีหลัง) =====
+    // ไม่ใช้ MutationObserver แล้ว → ไม่กระพริบ + ไม่หน่วงตอนทำรายการ
     const blockedFiles=NAV.filter(n=>!window.CANPAGE(n.k)).map(n=>(n.h||'').split('/').pop()).filter(Boolean);
-    // 3) ความสามารถย่อยที่ "ไม่มี" บนหน้านี้ → ซ่อน element ที่ติด data-cap ตัวนั้น
     const missing=CAP_ALL.filter(c=>!caps.includes(c));
     const css=document.createElement('style');css.id='permcss';
     let rules=missing.map(c=>`[data-cap~="${c}"]{display:none!important}`).join('');
     rules+=blockedFiles.map(f=>`.content a[href$="${f}"],.content [onclick*="${f}"]{display:none!important}`).join('');
-    // ดูอย่างเดียว (มี view แต่ไม่มี create/edit/manage/pay) → ซ่อนปุ่ม action ที่ไม่ได้ติด data-cap ด้วยคำสำคัญ (safety net)
+    // ดูอย่างเดียว (มี view แต่ไม่มี create/edit/manage/pay) → ซ่อนปุ่มหลัก (action) ทั้งหน้า+modal+booking modal
+    // เก็บปุ่ม ghost (ปิด/ยกเลิก) ไว้ และปุ่มที่ติด data-keep (เช่นปุ่ม "ปิด") ไม่โดนซ่อน
     const viewOnly=caps.includes('view')&&!['create','edit','manage','pay'].some(c=>caps.includes(c));
+    if(viewOnly){
+      // กันปุ่มปิด/ยกเลิก modal โดนซ่อน (บางอันเป็น btn-pri) → ยกเว้น onclick ที่ปิด modal
+      const keepClose=':not([onclick*="closeModal"]):not([onclick*="closeBooking"]):not([data-keep])';
+      rules+=`.content .btn-pri${keepClose},.content .btn-soft${keepClose},.content .btn-primary${keepClose},`
+           +`#genModal .modal-f .btn-pri${keepClose},#genModal .modal-f .btn-soft${keepClose},`
+           +`#bkModal .btn-pri${keepClose},`
+           +`.content .row-act button[onclick*="del"],.content .row-act button[title*="แก้"],.content button[onclick*="edit"]`
+           +`{display:none!important}`;
+    }
     css.textContent=rules;document.head.appendChild(css);
 
     if(viewOnly){
       const c=document.querySelector('.content');
       if(c)c.insertAdjacentHTML('afterbegin','<div style="background:#fff8ec;border:1px solid #f0d9a8;color:#8a6d1a;border-radius:11px;padding:9px 14px;margin-bottom:14px;font-size:13px;font-weight:600">👁️ โหมดดูอย่างเดียว — บัญชี '+roleThai(ROLE_KEY)+' ดูข้อมูลหน้านี้ได้ แต่แก้ไข/สร้างไม่ได้</div>');
-      const ACT=/เรียกคิว|ยกเลิกคิว|^ลบ| ลบ|อนุมัติ|จบงาน|เริ่มให้บริการ|เริ่มงาน|รับเข้า|เบิกออก|ขาย|มาแล้ว|ไม่มาตามนัด|เก็บเงิน|ไปชำระเงิน|สร้าง|เพิ่ม|บันทึก|แก้ไข|รับชำระ|ออกบิล|ยืนยัน|เช็คอิน/;
-      const hideActs=(root)=>{(root||document).querySelectorAll('.content button,.content .btn, .modal button,.modal .btn').forEach(b=>{
-        const t=(b.textContent||'').trim();if(!t||b.dataset.cap)return;
-        const isMain=b.classList.contains('btn-pri')||b.classList.contains('btn-soft')||b.classList.contains('btn-primary');
-        if(isMain&&ACT.test(t))b.style.display='none';});};
-      hideActs(document);
-      let tmr=null;new MutationObserver(()=>{clearTimeout(tmr);tmr=setTimeout(()=>hideActs(document),60);}).observe(document.body,{childList:true,subtree:true});
     }
     refreshCapsCache();
   }catch(e){console.warn('perm enforce',e);}

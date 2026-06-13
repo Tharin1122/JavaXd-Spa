@@ -124,7 +124,7 @@
 window.PAGE_INIT=function(){
   /* ===== แดชบอร์ดตามบทบาท =====
      Manager เห็นเฉพาะหน้างาน: ซ่อนรายรับเดือน/กำไรสุทธิ (ของเจ้าของ) → โชว์สต็อกใกล้หมดแทน
-     (Reception/Therapist/Cashier ไม่ถึงหน้านี้ — shell.js?v=12 พาไปหน้าของตัวเอง) */
+     (Reception/Therapist/Cashier ไม่ถึงหน้านี้ — shell.js?v=13 พาไปหน้าของตัวเอง) */
   if(window.ROLE_KEY==='Manager'){
     try{
       const h1=document.querySelector('.topbar h1');if(h1)h1.textContent='แดชบอร์ดผู้จัดการ (หน้างานวันนี้)';
@@ -436,6 +436,6 @@ async function loadDashboardReal(){
 </script>
 <script src="assets/api.js?v=2"></script>
 <script src="assets/gantt.js?v=3h"></script>
-<script src="assets/shell.js?v=12"></script>
+<script src="assets/shell.js?v=13"></script>
 </body>
 </html>
