@@ -23,7 +23,7 @@
 
 <template id="page">
   <div class="page-h">
-    <div class="ttl"><h2>การเงิน · รายรับ - รายจ่าย</h2><p>ภาพรวมรายได้ ค่าใช้จ่าย และใบเสร็จ ประจำเดือนพฤษภาคม 2567</p></div>
+    <div class="ttl"><h2>การเงิน · รายรับ - รายจ่าย</h2><p id="fin-sub">ภาพรวมรายได้ ค่าใช้จ่าย และใบเสร็จ</p></div>
     <div class="sp">
       <div class="seg"><button>วัน</button><button>สัปดาห์</button><button class="on">เดือน</button><button>ปี</button></div>
       <button class="btn btn-ghost" onclick="exportReport()" data-i="down">ส่งออกรายงาน</button>
@@ -74,6 +74,32 @@ window.PAGE_INIT=function(){
   const methodTh={Cash:['เงินสด','#22b07d'],Transfer:['โอน / พร้อมเพย์','#3b9bff'],QR:['QR พร้อมเพย์','#06c755'],Card:['บัตรเครดิต','#8b7cf0']};
   let BILLS=[]; let BILL_TOTAL=0;
 
+  // ช่วงเวลาแสดงกราฟ: วัน=7 แท่งล่าสุด / สัปดาห์=14 / เดือน=31 / ปี=รวมเป็นรายเดือน
+  let FIN_RANGE='เดือน';
+  const thMonth=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  (function(){const d=new Date();const el=document.getElementById('fin-sub');if(el)el.textContent='ภาพรวมรายได้ ค่าใช้จ่าย และใบเสร็จ ประจำเดือน'+['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'][d.getMonth()]+' '+(d.getFullYear()+543);})();
+  function renderBars(){
+    let series=(window._finSeries||[]).slice();
+    if(FIN_RANGE==='ปี'){
+      // รวมเป็นรายเดือน
+      const by={};series.forEach(s=>{const k=(s.label||'').slice(3);(by[k]=by[k]||{label:'',revenue:0}).revenue+=s.revenue;by[k].label=k;});
+      series=Object.values(by).slice(-12);
+      series.forEach(s=>{const m=parseInt(s.label)||0;s.label=thMonth[(m-1+12)%12]||s.label;});
+    } else {
+      const n={'วัน':7,'สัปดาห์':14,'เดือน':31}[FIN_RANGE]||31;
+      series=series.slice(-n);
+    }
+    const max=Math.max(1,...series.map(x=>x.revenue));
+    document.getElementById('bars').innerHTML=series.length?series.map(d=>`
+      <div class="bar-col"><div class="bar-pair">
+        <div class="bar inc" style="height:${d.revenue/max*100}%" title="${fmt(d.revenue)} ฿"></div>
+      </div><div class="bar-x">${(d.label||'').split(' ')[0]}</div></div>`).join(''):'<div style="color:var(--ink-3);padding:30px">ยังไม่มีข้อมูลรายรับ</div>';
+  }
+  document.querySelectorAll('.page-h .seg button').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('.page-h .seg button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+    FIN_RANGE=b.textContent.trim();renderBars();
+  });
+
   async function load(){
     let rev,pays,exp;
     try{ rev=await API.get('/report/revenue?groupBy=day'); }catch(e){console.error('revenue',e);}
@@ -102,13 +128,9 @@ window.PAGE_INIT=function(){
         {title:'กำไรสุทธิ · '+fmt(s.totalRevenue-expTotal)+' ฿',sub:'ที่มาของตัวเลข',rows:[['รายรับรวม',fmt(s.totalRevenue)+' ฿','#178a61'],['หักรายจ่าย','-'+fmt(expTotal)+' ฿','var(--red)'],['คงเหลือสุทธิ',fmt(s.totalRevenue-expTotal)+' ฿','var(--brand-700)'],['อัตรากำไร',s.totalRevenue?Math.round((s.totalRevenue-expTotal)/s.totalRevenue*100)+'%':'—']]},
         {title:'ยอดเฉลี่ยต่อบิล · '+fmt(Math.round(s.avgPerReceipt))+' ฿',sub:'ภาพรวมบิล',rows:[['จำนวนบิลทั้งหมด',s.totalReceipts+' บิล'],['รายรับรวม',fmt(s.totalRevenue)+' ฿'],['เฉลี่ยต่อบิล',fmt(Math.round(s.avgPerReceipt))+' ฿','var(--brand-700)']]},
       ]);
-      // bars จาก series (รายวัน)
-      const series=rev.series||[];
-      const max=Math.max(1,...series.map(x=>x.revenue));
-      document.getElementById('bars').innerHTML=series.length?series.map(d=>`
-        <div class="bar-col"><div class="bar-pair">
-          <div class="bar inc" style="height:${d.revenue/max*100}%" title="${fmt(d.revenue)} ฿"></div>
-        </div><div class="bar-x">${(d.label||'').split(' ')[0]}</div></div>`).join(''):'<div style="color:var(--ink-3);padding:30px">ยังไม่มีข้อมูลรายรับเดือนนี้</div>';
+      // bars จาก series — จำกัดตามช่วงที่เลือก (วัน/สัปดาห์/เดือน/ปี) ไม่ใช่เทท้ังปี 365 แท่งจนล้นจอ
+      window._finSeries=rev.series||[];
+      renderBars();
       // payment methods
       const total=s.totalRevenue||1;
       document.getElementById('pm').innerHTML=(s.byMethod||[]).length?(s.byMethod).map(m=>{const mt=methodTh[m.method]||[m.method,'#888'];const pct=Math.round(m.amount/total*100);return `
@@ -191,6 +213,6 @@ window.PAGE_INIT=function(){
 };
 </script>
 <script src="../assets/api.js?v=2"></script>
-<script src="../assets/shell.js?v=8"></script>
+<script src="../assets/shell.js?v=9"></script>
 </body>
 </html>

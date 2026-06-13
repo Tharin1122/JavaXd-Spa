@@ -15,22 +15,22 @@
    <div>
     <!-- stat cards -->
     <div class="stat-grid">
-      <div class="stat" style="cursor:pointer" onclick="statModal('revday')">
+      <div class="stat">
         <div class="row1"><div class="ic ic-purple" data-i="cal"></div><span class="tt">รายรับวันนี้</span><span class="info" data-i="info"></span></div>
         <div class="val">18,750 <small>บาท</small></div>
         <div class="row3"><span class="from">จาก 27 การจอง</span><span class="trend up" data-t="up">12.5%</span></div>
       </div>
-      <div class="stat" style="cursor:pointer" onclick="statModal('revmonth')">
+      <div class="stat">
         <div class="row1"><div class="ic ic-green" data-i="money"></div><span class="tt">รายรับเดือนนี้</span><span class="info" data-i="info"></span></div>
         <div class="val">412,950 <small>บาท</small></div>
         <div class="row3"><span class="from">จาก 215 การจอง</span><span class="trend up" data-t="up">8.3%</span></div>
       </div>
-      <div class="stat" style="cursor:pointer" onclick="statModal('cust')">
+      <div class="stat">
         <div class="row1"><div class="ic ic-orange" data-i="users"></div><span class="tt">ลูกค้าวันนี้</span><span class="info" data-i="info"></span></div>
         <div class="val">32 <small>คน</small></div>
         <div class="row3"><span class="from">ลูกค้าใหม่ 6 คน</span><span class="trend up" data-t="up">9.1%</span></div>
       </div>
-      <div class="stat" style="cursor:pointer" onclick="statModal('bk')">
+      <div class="stat">
         <div class="row1"><div class="ic ic-blue" data-i="cal"></div><span class="tt">การจองวันนี้</span><span class="info" data-i="info"></span></div>
         <div class="val">27 <small>การจอง</small></div>
         <div class="row3"><span class="from">รอดำเนินการ 5</span><span class="trend up" data-t="up">4 ใหม่</span></div>
@@ -106,7 +106,7 @@
     </div>
 
     <div class="widget">
-      <div class="widget-h"><h3>ปฏิทินการจอง</h3><span class="sp muted">พ.ค. 2567</span></div>
+      <div class="widget-h"><h3>ปฏิทินการจอง</h3><span class="sp muted" id="mcalLabel"></span></div>
       <div class="mcal" id="mcal"></div>
     </div>
 
@@ -124,7 +124,7 @@
 window.PAGE_INIT=function(){
   /* ===== แดชบอร์ดตามบทบาท =====
      Manager เห็นเฉพาะหน้างาน: ซ่อนรายรับเดือน/กำไรสุทธิ (ของเจ้าของ) → โชว์สต็อกใกล้หมดแทน
-     (Reception/Therapist/Cashier ไม่ถึงหน้านี้ — shell.js?v=8 พาไปหน้าของตัวเอง) */
+     (Reception/Therapist/Cashier ไม่ถึงหน้านี้ — shell.js?v=9 พาไปหน้าของตัวเอง) */
   if(window.ROLE_KEY==='Manager'){
     try{
       const h1=document.querySelector('.topbar h1');if(h1)h1.textContent='แดชบอร์ดผู้จัดการ (หน้างานวันนี้)';
@@ -204,25 +204,33 @@ window.PAGE_INIT=function(){
   };
   window.RQ=renderQueue;
 
-  // mini calendar — กดวันเพื่อดูการจองของวันนั้น
-  const dows=['อา','จ','อ','พ','พฤ','ศ','ส'];
-  let mc=dows.map(d=>`<div class="dow">${d}</div>`).join('');
-  const start=3, days=31, has=[3,9,17,21,24,28];
-  for(let i=0;i<start;i++)mc+='<div class="dy mut"></div>';
-  for(let d=1;d<=days;d++){
-    let cls='dy';if(d===17)cls+=' today';else if(has.includes(d))cls+=' has';
-    mc+=`<div class="${cls}" style="cursor:pointer" onclick="dayModal(${d})">${d}</div>`;
-  }
-  document.getElementById('mcal').innerHTML=mc;
-  window.dayModal=function(d){
-    const hasBk=has.includes(d)||d===17;
-    const list=d===17?DB.bookings:hasBk?DB.bookings.slice(0,2):[];
-    BS.modal({title:'การจองวันที่ '+d+' พฤษภาคม 2567',sub:list.length?list.length+' การจอง':'ยังไม่มีการจอง',w:440,
-      body:list.length?list.map(b=>`<div class="notif" style="align-items:center">${av(b.cust,36)}<div class="tx" style="margin-left:10px"><div style="font-weight:600">${b.cust}</div><div class="tm" style="color:var(--ink-2)">${b.svc} · หมอนวด${b.th||'-'}</div></div><span class="badge b-purple" style="margin-left:auto">${b.time} น.</span></div>`).join('')
-        :`<div style="text-align:center;padding:24px 0;color:var(--ink-3);font-size:13px">วันนี้ยังว่าง เพิ่มการจองใหม่ได้เลย</div>`,
-      foot:`<a class="btn btn-ghost" href="pages/bookings.html" style="text-decoration:none;margin-right:auto">ดูหน้าการจอง →</a>
-        <button class="btn btn-pri" onclick="BS.closeModal();BS.openBooking()">${svg('plus')} สร้างการจอง</button>`});
-  };
+  // mini calendar — เดือนปัจจุบันจริง จุด = วันที่มีการจองจริงใน DB, กดวันเปิดนัดจริงของวันนั้น
+  (async()=>{
+    const dows=['อา','จ','อ','พ','พฤ','ศ','ส'];
+    const thM=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+    const nowD=new Date();const Y=nowD.getFullYear(),M=nowD.getMonth();
+    const lbl=document.getElementById('mcalLabel');if(lbl)lbl.textContent=thM[M]+' '+(Y+543);
+    let allBk=[];try{const r=await API.get('/booking?pageSize=500');allBk=(r&&r.items)||[];}catch(e){}
+    const pre=Y+'-'+String(M+1).padStart(2,'0')+'-';
+    const byDay={};allBk.forEach(b=>{if((b.bookingDate||'').startsWith(pre)&&b.status<3){const d=parseInt(b.bookingDate.slice(8));(byDay[d]=byDay[d]||[]).push(b);}});
+    const start=new Date(Y,M,1).getDay(), days=new Date(Y,M+1,0).getDate(), today=nowD.getDate();
+    let mc=dows.map(d=>`<div class="dow">${d}</div>`).join('');
+    for(let i=0;i<start;i++)mc+='<div class="dy mut"></div>';
+    for(let d=1;d<=days;d++){
+      let cls='dy';if(d===today)cls+=' today';else if(byDay[d])cls+=' has';
+      mc+=`<div class="${cls}" style="cursor:pointer" onclick="dayModal(${d})">${d}</div>`;
+    }
+    document.getElementById('mcal').innerHTML=mc;
+    window.dayModal=function(d){
+      const list=(byDay[d]||[]).slice().sort((a,b)=>(a.startTime||'').localeCompare(b.startTime||''));
+      BS.modal({title:'การจองวันที่ '+d+' '+thM[M]+' '+(Y+543),sub:list.length?list.length+' การจอง':'ยังไม่มีการจอง',w:440,
+        body:list.length?list.map(b=>{const nm=(b.customer&&b.customer.displayName)||'-';const th=(b.items&&b.items[0]&&b.items[0].therapist&&b.items[0].therapist.displayName)||'ระบบจัดให้';
+          return `<div class="notif" style="align-items:center">${av(nm,36)}<div class="tx" style="margin-left:10px"><div style="font-weight:600">${nm}</div><div class="tm" style="color:var(--ink-2)">${b.itemCount||1} บริการ · หมอนวด ${th}</div></div><span class="badge b-purple" style="margin-left:auto">${(b.startTime||'').slice(0,5)} น.</span></div>`;}).join('')
+          :`<div style="text-align:center;padding:24px 0;color:var(--ink-3);font-size:13px">วันนี้ยังว่าง เพิ่มการจองใหม่ได้เลย</div>`,
+        foot:`<a class="btn btn-ghost" href="pages/bookings.html" style="text-decoration:none;margin-right:auto">ดูหน้าการจอง →</a>
+          <button class="btn btn-pri" onclick="BS.closeModal();BS.openBooking()">${svg('plus')} สร้างการจอง</button>`});
+    };
+  })();
 
   // notifications — จาก DB กลาง
   document.getElementById('notifList').innerHTML=DB.notifications.slice(0,4).map(n=>
@@ -428,6 +436,6 @@ async function loadDashboardReal(){
 </script>
 <script src="assets/api.js?v=2"></script>
 <script src="assets/gantt.js?v=3h"></script>
-<script src="assets/shell.js?v=8"></script>
+<script src="assets/shell.js?v=9"></script>
 </body>
 </html>

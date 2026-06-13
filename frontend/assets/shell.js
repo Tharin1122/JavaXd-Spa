@@ -590,8 +590,8 @@ window.BS={
     BS.modal({title:o.title||'ส่งออกข้อมูล',sub:o.sub||'เลือกรูปแบบไฟล์และช่วงข้อมูล',w:440,
       body:`<div class="field"><label>รูปแบบไฟล์</label>
           <div class="seg-full" id="expFmt">${fmts.map((f,i)=>`<button class="${i===0?'on':''}">${f}</button>`).join('')}</div></div>
-        <div class="grid2"><div class="field"><label>ตั้งแต่วันที่</label><input type="date" value="2567-05-01"></div>
-          <div class="field"><label>ถึงวันที่</label><input type="date" value="2567-05-17"></div></div>
+        <div class="grid2"><div class="field"><label>ตั้งแต่วันที่</label><input type="date" value="${(d=>new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,8))(new Date())}01"></div>
+          <div class="field"><label>ถึงวันที่</label><input type="date" value="${(d=>new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10))(new Date())}"></div></div>
         ${o.extra||''}`,
       foot:`<button class="btn btn-ghost" onclick="BS.closeModal()">ยกเลิก</button>
         <button class="btn btn-pri" onclick="BS.closeModal();BS.toast('กำลังสร้างไฟล์... ดาวน์โหลดอัตโนมัติเมื่อเสร็จ')">${svg('down')} ดาวน์โหลด</button>`});
@@ -685,11 +685,25 @@ if(window.PAGE_INIT)window.PAGE_INIT();
     let M=DEF;
     try{const saved=await API.get('/role/matrix');if(Array.isArray(saved)&&saved.length)M=saved;}catch(e){}
     const lvl={};MODS.forEach((pages,i)=>{const v=(M[i]&&M[i][COL]!=null)?M[i][COL]:DEF[i][COL];pages.forEach(p=>lvl[p]=v);});
-    // ซ่อนเมนูที่ไม่มีสิทธิ์ (level 0)
-    document.querySelectorAll('.side .nav-item').forEach(a=>{
-      const href=(a.getAttribute('href')||'').split('/').pop();
-      if(href&&lvl[href]===0){a.style.display='none';const sub=a.nextElementSibling;if(sub&&sub.classList.contains('nav-sub'))sub.style.display='none';}
-    });
+    // แคชเชียร์: โมดูลการเงินรวม POS ไว้ด้วยกัน แต่หน้า "การเงินรวมของร้าน" (กำไร/รายจ่าย) ไม่ใช่งานเก็บเงินหน้าร้าน → ซ่อน
+    if(role==='Cashier')lvl['finance.html']=0;
+    // ===== เมนูข้างต้องตรงกับตารางสิทธิ์จริง (matrix) — ไม่ใช่รายการตายตัว =====
+    // บั๊กเดิม: Owner ตั้ง matrix ว่า "ดูได้" แต่เมนู hardcode ไม่โชว์ → สิทธิ์บอกให้เห็นแต่มองไม่เห็น
+    try{
+      const fileOf=h=>(h||'').split('/').pop();
+      const extras=(ROLE_MENU[role]||[]).map(k=>NAV_EXTRA[k]).filter(Boolean);          // หน้าแรกเฉพาะบทบาท (front-desk/my-queue)
+      const allowed=NAV.filter(n=>lvl[fileOf(n.h)]>0);                                   // ทุกหน้าที่ matrix ให้สิทธิ์ ≥ ดูได้
+      const items=[...extras,...allowed.filter(n=>!extras.some(e=>e.k===n.k))];
+      const navEl=document.querySelector('.side .nav');
+      if(navEl&&items.length){
+        navEl.innerHTML=items.map(n=>{
+          const act=n.k===PAGE?' active':'';const hasSub=n.sub&&n.k===PAGE;
+          const view=lvl[fileOf(n.h)]===2?' <span style="font-size:9.5px;opacity:.65">👁</span>':'';
+          const sub=n.sub?`<div class="nav-sub${hasSub?' show':''}">${n.sub.map(s=>`<a href="${B}${s.h}">${s.t}</a>`).join('')}</div>`:'';
+          return `<a href="${B}${n.h}" class="nav-item${act}${hasSub?' open':''}">${svg(n.ic)}<span>${n.t}${view}</span>${n.sub?`<span class="chev" onclick="return BS.navToggle(event,this)" title="เปิด/ปิดเมนูย่อย">${svg('chev')}</span>`:''}</a>${sub}`;
+        }).join('');
+      }
+    }catch(e){console.warn('nav rebuild',e);}
     // ===== ซ่อนปุ่ม/ลิงก์ "ทุกที่" ที่พาไปหน้าซึ่ง role นี้ไม่มีสิทธิ์ — ไม่ใช่แค่เมนู =====
     // หลัก UX: ปุ่มที่กดแล้วเจอ "ไม่มีสิทธิ์" ไม่ควรมีให้เห็นตั้งแต่แรก
     const blockedTarget=(s)=>{const m=(s||'').match(/([a-z0-9-]+\.html)/i);return !!(m&&lvl[m[1]]===0);};
