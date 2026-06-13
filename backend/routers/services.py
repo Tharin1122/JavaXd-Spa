@@ -9,6 +9,12 @@ from ..security import current_user
 router = APIRouter(prefix="/api", tags=["services"], dependencies=[Depends(current_user)])
 
 
+def _mgr(u: User):
+    """แก้ไขบริการ/คอร์ส = เจ้าของ+ผู้จัดการเท่านั้น (คนอื่นดูได้)"""
+    if u.role not in ("Owner", "Manager"):
+        raise HTTPException(status_code=403, detail="เฉพาะเจ้าของ/ผู้จัดการแก้ไขบริการได้")
+
+
 def service_out(db: Session, s: Service) -> dict:
     cat = db.get(ServiceCategory, s.category_id) if s.category_id else None
     return {
@@ -30,6 +36,7 @@ def list_services(db: Session = Depends(get_db)):
 
 @router.post("/services", status_code=201)
 def create_service(body: dict = Body(...), u: User = Depends(current_user), db: Session = Depends(get_db)):
+    _mgr(u)
     if not (body.get("name") or "").strip():
         raise HTTPException(status_code=422, detail="กรุณาระบุชื่อบริการ")
     s = Service(
@@ -45,7 +52,8 @@ def create_service(body: dict = Body(...), u: User = Depends(current_user), db: 
 
 
 @router.put("/services/{sid}")
-def update_service(sid: str, body: dict = Body(...), db: Session = Depends(get_db)):
+def update_service(sid: str, body: dict = Body(...), u: User = Depends(current_user), db: Session = Depends(get_db)):
+    _mgr(u)
     s = db.get(Service, sid)
     if s is None:
         raise HTTPException(status_code=404, detail="ไม่พบบริการ")
@@ -62,7 +70,8 @@ def update_service(sid: str, body: dict = Body(...), db: Session = Depends(get_d
 
 
 @router.delete("/services/{sid}", status_code=204)
-def delete_service(sid: str, db: Session = Depends(get_db)):
+def delete_service(sid: str, u: User = Depends(current_user), db: Session = Depends(get_db)):
+    _mgr(u)
     s = db.get(Service, sid)
     if s is None:
         raise HTTPException(status_code=404, detail="ไม่พบบริการ")

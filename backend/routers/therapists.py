@@ -38,6 +38,8 @@ def list_therapists(db: Session = Depends(get_db)):
 
 @router.post("/therapist", status_code=201)
 def create_therapist(body: dict = Body(...), u: User = Depends(current_user), db: Session = Depends(get_db)):
+    if u.role not in ("Owner", "Manager"):
+        raise HTTPException(status_code=403, detail="เฉพาะเจ้าของ/ผู้จัดการเพิ่มพนักงานได้")
     if not (body.get("displayName") or "").strip():
         raise HTTPException(status_code=422, detail="กรุณาระบุชื่อ")
     t = Therapist(display_name=body["displayName"].strip(), code=body.get("code"), phone=body.get("phone"),
