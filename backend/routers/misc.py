@@ -57,8 +57,8 @@ def timeline(pageSize: int = 20, offset: int = 0, dateFrom: str = "", dateTo: st
 
 @router.get("/expense")
 def expenses(u: User = Depends(current_user), db: Session = Depends(get_db)):
-    if u.role not in ("Owner", "Manager"):
-        raise HTTPException(status_code=403, detail="เฉพาะเจ้าของ/ผู้จัดการดูรายจ่ายได้")
+    from ..perms import require
+    require(db, u, "money", ["finance"], "ไม่มีสิทธิ์ดูรายจ่ายร้าน — เปิดสิทธิ์ได้ที่หน้าสิทธิ์การใช้งาน")
     month_start = datetime.now().strftime("%Y-%m-01")
     rows = db.query(Expense).filter(Expense.spent_at >= month_start + " 00:00:00").order_by(Expense.spent_at.desc()).all()
     by_cat: dict[str, float] = {}
@@ -72,8 +72,8 @@ def expenses(u: User = Depends(current_user), db: Session = Depends(get_db)):
 
 @router.post("/expense", status_code=201)
 def create_expense(body: dict = Body(...), u: User = Depends(current_user), db: Session = Depends(get_db)):
-    if u.role not in ("Owner", "Manager"):
-        raise HTTPException(status_code=403, detail="เฉพาะเจ้าของ/ผู้จัดการบันทึกรายจ่ายได้")
+    from ..perms import require
+    require(db, u, "money", ["finance"], "ไม่มีสิทธิ์บันทึกรายจ่าย — เปิดสิทธิ์ได้ที่หน้าสิทธิ์การใช้งาน")
     amt = float(body.get("amount") or 0)
     if amt <= 0:
         raise HTTPException(status_code=422, detail="จำนวนเงินต้องมากกว่า 0")
@@ -108,8 +108,8 @@ def get_settings(db: Session = Depends(get_db)):
 
 @router.put("/settings")
 def put_settings(body: dict = Body(...), u: User = Depends(current_user), db: Session = Depends(get_db)):
-    if u.role not in ("Owner", "Manager"):
-        raise HTTPException(status_code=403, detail="เฉพาะเจ้าของ/ผู้จัดการแก้ตั้งค่าร้านได้")
+    from ..perms import require
+    require(db, u, "view", ["settings"], "ไม่มีสิทธิ์แก้ตั้งค่าร้าน — เปิดสิทธิ์ได้ที่หน้าสิทธิ์การใช้งาน")
     kv_set(db, "settings", body)
     log_event(db, "SettingsUpdated", "Settings", None, "บันทึกการตั้งค่าร้าน", u.display_name)
     db.commit()

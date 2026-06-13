@@ -7,6 +7,7 @@ from ..db import get_db
 from ..helpers import log_event, next_queue_no, walkin_out
 from ..models import (Booking, Customer, Service, Therapist, TherapistService,
                       User, WalkIn, WalkInItem)
+from ..perms import require
 from ..security import current_user
 
 router = APIRouter(prefix="/api/walk-in", tags=["walk-in"], dependencies=[Depends(current_user)])
@@ -194,7 +195,9 @@ def therapist_availability(date: str = "", time: str = "", serviceId: str = "",
 
 @router.post("", status_code=201)
 def create_walkin(body: dict = Body(...), u: User = Depends(current_user), db: Session = Depends(get_db)):
-    # ทุกบทบาทที่มีสิทธิ์ "create" บนหน้าคิวสร้างได้ (รวมหมอนวด — สร้างคิวของตัวเองได้)
+    # สร้างคิว = สิทธิ์ create บนหน้าใดหน้าหนึ่งที่เกี่ยวกับคิว (Owner ตั้งได้) — หมอนวดสร้างคิวตัวเองได้
+    require(db, u, "create", ["frontdesk", "bookings", "myqueue", "pos"],
+            "บัญชีนี้ไม่มีสิทธิ์สร้างคิว — เปิดสิทธิ์ได้ที่หน้าสิทธิ์การใช้งาน")
     cust = db.get(Customer, body.get("customerId") or "")
     if cust is None:
         raise HTTPException(status_code=404, detail="ไม่พบลูกค้า")

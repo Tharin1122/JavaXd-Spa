@@ -14,10 +14,11 @@ router = APIRouter(prefix="/api", tags=["packages"], dependencies=[Depends(curre
 METHOD_CODE = {"Cash": 0, "Transfer": 1, "QR": 2, "Card": 3}
 
 
-def _mgr(u: User):
-    """แก้คอร์ส/โปรโมชัน = เจ้าของ+ผู้จัดการ (ขาย/แลกใช้ทำได้ทุกบทบาทหน้าร้าน)"""
-    if u.role not in ("Owner", "Manager"):
-        raise HTTPException(status_code=403, detail="เฉพาะเจ้าของ/ผู้จัดการแก้คอร์ส/โปรโมชันได้")
+def _mgr(u: User, db=None):
+    """แก้คอร์ส/โปรโมชัน = สิทธิ์ create/edit บนหน้าแพ็กเกจ (Owner ตั้งได้)"""
+    from ..perms import has_cap
+    if not (has_cap(db, u, "create", "packages") or has_cap(db, u, "edit", "packages")):
+        raise HTTPException(status_code=403, detail="ไม่มีสิทธิ์แก้คอร์ส/โปรโมชัน — เปิดสิทธิ์ได้ที่หน้าสิทธิ์การใช้งาน")
 
 
 def package_out(p: Package) -> dict:
@@ -33,7 +34,7 @@ def list_packages(db: Session = Depends(get_db)):
 
 @router.post("/package", status_code=201)
 def create_package(body: dict = Body(...), u: User = Depends(current_user), db: Session = Depends(get_db)):
-    _mgr(u)
+    _mgr(u, db)
     if not (body.get("name") or "").strip():
         raise HTTPException(status_code=422, detail="กรุณาระบุชื่อคอร์ส")
     p = Package(name=body["name"].strip(), description=body.get("description"),
@@ -47,7 +48,7 @@ def create_package(body: dict = Body(...), u: User = Depends(current_user), db: 
 
 @router.put("/package/{pid}")
 def update_package(pid: str, body: dict = Body(...), u: User = Depends(current_user), db: Session = Depends(get_db)):
-    _mgr(u)
+    _mgr(u, db)
     p = db.get(Package, pid)
     if p is None:
         raise HTTPException(status_code=404, detail="ไม่พบคอร์ส")
@@ -64,7 +65,7 @@ def update_package(pid: str, body: dict = Body(...), u: User = Depends(current_u
 
 @router.delete("/package/{pid}", status_code=204)
 def delete_package(pid: str, u: User = Depends(current_user), db: Session = Depends(get_db)):
-    _mgr(u)
+    _mgr(u, db)
     p = db.get(Package, pid)
     if p is None:
         raise HTTPException(status_code=404, detail="ไม่พบคอร์ส")
@@ -153,7 +154,7 @@ def _fill(x: Promotion, body: dict) -> None:
 
 @router.post("/promotion", status_code=201)
 def create_promo(body: dict = Body(...), u: User = Depends(current_user), db: Session = Depends(get_db)):
-    _mgr(u)
+    _mgr(u, db)
     x = Promotion(kind="promo")
     _fill(x, body)
     db.add(x)
@@ -163,7 +164,7 @@ def create_promo(body: dict = Body(...), u: User = Depends(current_user), db: Se
 
 @router.post("/promotion/coupon", status_code=201)
 def create_coupon(body: dict = Body(...), u: User = Depends(current_user), db: Session = Depends(get_db)):
-    _mgr(u)
+    _mgr(u, db)
     x = Promotion(kind="coupon")
     _fill(x, body)
     if not x.code:
@@ -175,13 +176,13 @@ def create_coupon(body: dict = Body(...), u: User = Depends(current_user), db: S
 
 @router.put("/promotion/coupon/{xid}")
 def update_coupon(xid: str, body: dict = Body(...), u: User = Depends(current_user), db: Session = Depends(get_db)):
-    _mgr(u)
+    _mgr(u, db)
     return _update(xid, body, db)
 
 
 @router.put("/promotion/{xid}")
 def update_promo(xid: str, body: dict = Body(...), u: User = Depends(current_user), db: Session = Depends(get_db)):
-    _mgr(u)
+    _mgr(u, db)
     return _update(xid, body, db)
 
 
@@ -196,7 +197,7 @@ def _update(xid: str, body: dict, db: Session):
 
 @router.delete("/promotion/{xid}", status_code=204)
 def delete_promo(xid: str, u: User = Depends(current_user), db: Session = Depends(get_db)):
-    _mgr(u)
+    _mgr(u, db)
     x = db.get(Promotion, xid)
     if x is None:
         raise HTTPException(status_code=404, detail="ไม่พบโปรโมชัน")

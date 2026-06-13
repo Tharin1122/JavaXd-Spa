@@ -77,11 +77,13 @@ def test_backend_blocks_therapist_from_sensitive_data(client):
 
 def test_backend_blocks_cashier_from_owner_data(client):
     h = _hdr(client, "cashier")
-    assert client.get("/api/report/summary", headers=h).status_code == 403       # รายงานเชิงลึก
+    # นโยบายใหม่: แคชเชียร์ทำ POS ได้ แต่ไม่เห็น "เงินร้าน" (รายได้/กำไร/รายจ่าย/รายชื่อพนักงาน)
+    assert client.get("/api/report/summary", headers=h).status_code == 403
+    assert client.get("/api/report/revenue", headers=h).status_code == 403       # รายได้ร้าน = money
     assert client.get("/api/user", headers=h).status_code == 403
     assert client.get("/api/expense", headers=h).status_code == 403
-    # แต่ดูตัวเลขการเงินหน้า POS/ปิดยอดได้
-    assert client.get("/api/report/revenue", headers=h).status_code == 200
+    # แต่ทำ POS / ดูคิวได้
+    assert client.get("/api/walk-in", headers=h).status_code == 200
 
 
 def test_only_owner_creates_user(client):

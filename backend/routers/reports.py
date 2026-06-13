@@ -13,21 +13,23 @@ from ..security import current_user
 router = APIRouter(prefix="/api", tags=["reports"], dependencies=[Depends(current_user)])
 
 
-def _mgr(u: User):
-    """รายงานเชิงลึก = เจ้าของ+ผู้จัดการเท่านั้น"""
-    if u.role not in ("Owner", "Manager"):
-        raise HTTPException(status_code=403, detail="ไม่มีสิทธิ์เข้าถึงรายงานนี้")
+from ..perms import has_cap, require
 
 
-def _fin(u: User):
-    """ตัวเลขการเงิน (หน้าการเงิน/ปิดยอด) = เจ้าของ+ผู้จัดการ+รีเซป(ดู)+แคชเชียร์ — หมอนวดห้าม"""
-    if u.role not in ("Owner", "Manager", "Reception", "Cashier"):
-        raise HTTPException(status_code=403, detail="ไม่มีสิทธิ์เข้าถึงข้อมูลการเงิน")
+def _money(db, u):
+    """ตัวเลขเงิน/กำไร/รายได้ = สิทธิ์ money (ตามที่ Owner ตั้ง) — ผู้จัดการไม่มี money โดยค่าเริ่มต้น"""
+    require(db, u, "money", ["reports", "finance", "dashboard"],
+            "ไม่มีสิทธิ์ดูข้อมูลการเงิน/รายได้ — เปิดสิทธิ์ได้ที่หน้าสิทธิ์การใช้งาน")
+
+
+def _ops_report(db, u):
+    """รายงานเชิงปฏิบัติงาน (บริการขายดี ฯลฯ) = สิทธิ์ดูหน้ารายงาน"""
+    require(db, u, "view", ["reports"], "ไม่มีสิทธิ์เข้าถึงรายงานนี้")
 
 
 @router.get("/report/revenue")
 def revenue(groupBy: str = "day", u: User = Depends(current_user), db: Session = Depends(get_db)):
-    _fin(u)
+    _money(db, u)
     now = datetime.now()
     start = now - timedelta(days=365)
     pays = db.query(Payment).filter(Payment.paid_at >= start).all()
@@ -47,7 +49,7 @@ def revenue(groupBy: str = "day", u: User = Depends(current_user), db: Session =
 
 @router.get("/report/summary")
 def summary(u: User = Depends(current_user), db: Session = Depends(get_db)):
-    _mgr(u)
+    _money(db, u)
     now = datetime.now()
     month_start = now.strftime("%Y-%m-01")
     prev_end = datetime.strptime(month_start, "%Y-%m-%d") - timedelta(days=1)
@@ -66,7 +68,7 @@ def summary(u: User = Depends(current_user), db: Session = Depends(get_db)):
 
 @router.get("/report/popular-services")
 def popular(top: int = 10, u: User = Depends(current_user), db: Session = Depends(get_db)):
-    _mgr(u)
+    _ops_report(db, u)
     rows = db.query(PaymentItem).all()
     cnt: dict[str, int] = defaultdict(int)
     for it in rows:
@@ -78,14 +80,16 @@ def popular(top: int = 10, u: User = Depends(current_user), db: Session = Depend
 # หมอนวดเข้าได้ แต่กรองให้เห็นเฉพาะค่ามือของตัวเอง (เจ้าของ/ผู้จัดการเห็นทุกคน)
 @router.get("/report/therapist-performance")
 def therapist_performance(u: User = Depends(current_user), db: Session = Depends(get_db)):
-    if u.role not in ("Owner", "Manager", "Therapist"):
-        raise HTTPException(status_code=403, detail="ไม่มีสิทธิ์เข้าถึงข้อมูลส่วนนี้")
+    # หมอนวดเห็นค่ามือ "ของตัวเอง" ได้เสมอ | คนอื่นต้องมีสิทธิ์ money ถึงเห็นของทุกคน (กันอิจฉา)
     month_start = datetime.now().strftime("%Y-%m-01")
     services = {s.id: s for s in db.query(Service).all()}
     perf = []
     ther_list = db.query(Therapist).all()
-    if u.role == "Therapist":  # หมอนวดเห็นค่ามือของตัวเองเท่านั้น
-        ther_list = [t for t in ther_list if getattr(t, "user_id", None) == u.id]
+    own = [t for t in ther_list if getattr(t, "user_id", None) == u.id]
+    if own and not has_cap(db, u, "money", ["reports", "finance", "staff"]):
+        ther_list = own  # เห็นเฉพาะของตัวเอง
+    elif not has_cap(db, u, "money", ["reports", "finance", "staff"]) and u.role != "Owner":
+        raise HTTPException(status_code=403, detail="ไม่มีสิทธิ์ดูค่ามือของทีม — เปิดสิทธิ์ได้ที่หน้าสิทธิ์การใช้งาน")
     for t in ther_list:
         items = (db.query(PaymentItem).join(Payment, Payment.id == PaymentItem.payment_id)
                  .filter(PaymentItem.therapist_id == t.id, Payment.paid_at >= month_start + " 00:00:00").all())
@@ -110,7 +114,7 @@ def therapist_performance(u: User = Depends(current_user), db: Session = Depends
 @router.get("/report/daily-close")
 def daily_close(date: str = "", u: User = Depends(current_user), db: Session = Depends(get_db)):
     """ปิดยอดสิ้นวัน (Z-Report): รายรับแยกช่องทาง + รายจ่าย + กำไรสุทธิของวัน"""
-    _fin(u)
+    _money(db, u)
     from ..helpers import METHOD_NAMES
     from ..models import Expense, WalkIn
     day = date or datetime.now().strftime("%Y-%m-%d")

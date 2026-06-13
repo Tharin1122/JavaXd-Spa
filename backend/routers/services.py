@@ -9,10 +9,11 @@ from ..security import current_user
 router = APIRouter(prefix="/api", tags=["services"], dependencies=[Depends(current_user)])
 
 
-def _mgr(u: User):
-    """แก้ไขบริการ/คอร์ส = เจ้าของ+ผู้จัดการเท่านั้น (คนอื่นดูได้)"""
-    if u.role not in ("Owner", "Manager"):
-        raise HTTPException(status_code=403, detail="เฉพาะเจ้าของ/ผู้จัดการแก้ไขบริการได้")
+def _mgr(u: User, db: Session):
+    """แก้ไขบริการ/คอร์ส = สิทธิ์ create/edit บนหน้าบริการ (Owner ตั้งได้)"""
+    from ..perms import has_cap
+    if not (has_cap(db, u, "create", "services") or has_cap(db, u, "edit", "services")):
+        raise HTTPException(status_code=403, detail="ไม่มีสิทธิ์แก้ไขบริการ — เปิดสิทธิ์ได้ที่หน้าสิทธิ์การใช้งาน")
 
 
 def service_out(db: Session, s: Service) -> dict:
@@ -36,7 +37,7 @@ def list_services(db: Session = Depends(get_db)):
 
 @router.post("/services", status_code=201)
 def create_service(body: dict = Body(...), u: User = Depends(current_user), db: Session = Depends(get_db)):
-    _mgr(u)
+    _mgr(u, db)
     if not (body.get("name") or "").strip():
         raise HTTPException(status_code=422, detail="กรุณาระบุชื่อบริการ")
     s = Service(
@@ -53,7 +54,7 @@ def create_service(body: dict = Body(...), u: User = Depends(current_user), db: 
 
 @router.put("/services/{sid}")
 def update_service(sid: str, body: dict = Body(...), u: User = Depends(current_user), db: Session = Depends(get_db)):
-    _mgr(u)
+    _mgr(u, db)
     s = db.get(Service, sid)
     if s is None:
         raise HTTPException(status_code=404, detail="ไม่พบบริการ")
@@ -71,7 +72,7 @@ def update_service(sid: str, body: dict = Body(...), u: User = Depends(current_u
 
 @router.delete("/services/{sid}", status_code=204)
 def delete_service(sid: str, u: User = Depends(current_user), db: Session = Depends(get_db)):
-    _mgr(u)
+    _mgr(u, db)
     s = db.get(Service, sid)
     if s is None:
         raise HTTPException(status_code=404, detail="ไม่พบบริการ")

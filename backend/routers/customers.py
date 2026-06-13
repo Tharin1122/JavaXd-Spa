@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from ..db import get_db
 from ..helpers import customer_brief, iso, log_event
 from ..models import Customer, Payment, PaymentItem, Therapist, User
+from ..perms import require
 from ..security import current_user
 
 router = APIRouter(prefix="/api/customer", tags=["customers"], dependencies=[Depends(current_user)])
@@ -12,7 +13,7 @@ router = APIRouter(prefix="/api/customer", tags=["customers"], dependencies=[Dep
 @router.get("")
 def list_customers(search: str = "", pageSize: int = 50,
                    u: User = Depends(current_user), db: Session = Depends(get_db)):
-    # ทุกบทบาทดูฐานลูกค้าได้ (หมอนวดจัดการลูกค้าได้ตามนโยบายร้าน) — ข้อมูลการเงินร้านยังกันไว้ที่หน้าอื่น
+    require(db, u, "view", "customers")   # สิทธิ์อ่านฐานลูกค้า — ตามที่ Owner ตั้งในหน้า Roles
     q = db.query(Customer)
     if search:
         like = f"%{search}%"
@@ -23,6 +24,7 @@ def list_customers(search: str = "", pageSize: int = 50,
 
 @router.post("", status_code=201)
 def create_customer(body: dict = Body(...), u: User = Depends(current_user), db: Session = Depends(get_db)):
+    require(db, u, "create", "customers")
     from ..helpers import clean_name
     name = clean_name(body.get("displayName"))
     if not name:
@@ -60,7 +62,8 @@ def get_customer(cid: str, db: Session = Depends(get_db)):
 
 
 @router.put("/{cid}")
-def update_customer(cid: str, body: dict = Body(...), db: Session = Depends(get_db)):
+def update_customer(cid: str, body: dict = Body(...), u: User = Depends(current_user), db: Session = Depends(get_db)):
+    require(db, u, "edit", "customers")
     c = _get(db, cid)
     if body.get("displayName"):
         c.display_name = body["displayName"]
@@ -72,6 +75,7 @@ def update_customer(cid: str, body: dict = Body(...), db: Session = Depends(get_
 
 @router.delete("/{cid}", status_code=204)
 def delete_customer(cid: str, u: User = Depends(current_user), db: Session = Depends(get_db)):
+    require(db, u, "manage", "customers", "ลบลูกค้าต้องมีสิทธิ์จัดการ — เปิดที่หน้าสิทธิ์การใช้งาน")
     c = _get(db, cid)
     # ห้ามลบลูกค้าที่มีประวัติการเงิน/คิว — จะทำให้บิลเก่ากลายเป็นข้อมูลกำพร้า (ไม่มีชื่อ)
     from ..models import WalkIn

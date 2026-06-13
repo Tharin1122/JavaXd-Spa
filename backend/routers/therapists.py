@@ -38,8 +38,8 @@ def list_therapists(db: Session = Depends(get_db)):
 
 @router.post("/therapist", status_code=201)
 def create_therapist(body: dict = Body(...), u: User = Depends(current_user), db: Session = Depends(get_db)):
-    if u.role not in ("Owner", "Manager"):
-        raise HTTPException(status_code=403, detail="เฉพาะเจ้าของ/ผู้จัดการเพิ่มพนักงานได้")
+    from ..perms import require
+    require(db, u, "create", "staff", "ไม่มีสิทธิ์เพิ่มพนักงาน — เปิดสิทธิ์ได้ที่หน้าสิทธิ์การใช้งาน")
     if not (body.get("displayName") or "").strip():
         raise HTTPException(status_code=422, detail="กรุณาระบุชื่อ")
     t = Therapist(display_name=body["displayName"].strip(), code=body.get("code"), phone=body.get("phone"),
@@ -171,8 +171,8 @@ def user_roles():
 
 @router.get("/user")
 def list_users(u: User = Depends(current_user), db: Session = Depends(get_db)):
-    if u.role not in ("Owner", "Manager"):
-        raise HTTPException(status_code=403, detail="เฉพาะเจ้าของ/ผู้จัดการดูรายชื่อผู้ใช้ได้")
+    from ..perms import require
+    require(db, u, "view", "staff", "ไม่มีสิทธิ์ดูรายชื่อผู้ใช้ — เปิดสิทธิ์ได้ที่หน้าสิทธิ์การใช้งาน")
     return [user_payload(x) for x in db.query(User).all()]
 
 

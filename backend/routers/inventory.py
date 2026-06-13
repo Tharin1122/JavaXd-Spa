@@ -9,10 +9,11 @@ from ..security import current_user
 router = APIRouter(prefix="/api/inventory", tags=["inventory"], dependencies=[Depends(current_user)])
 
 
-def _mgr(u: User):
-    """จัดการสต็อก = เจ้าของ+ผู้จัดการเท่านั้น"""
-    if u.role not in ("Owner", "Manager"):
-        raise HTTPException(status_code=403, detail="เฉพาะเจ้าของ/ผู้จัดการจัดการสต็อกได้")
+def _mgr(u: User, db=None):
+    """จัดการสต็อก = สิทธิ์ create/edit บนหน้าสต็อก (Owner ตั้งได้)"""
+    from ..perms import has_cap
+    if not (has_cap(db, u, "create", "inventory") or has_cap(db, u, "edit", "inventory")):
+        raise HTTPException(status_code=403, detail="ไม่มีสิทธิ์จัดการสต็อก — เปิดสิทธิ์ได้ที่หน้าสิทธิ์การใช้งาน")
 
 
 def item_out(x: InventoryItem) -> dict:
@@ -45,7 +46,7 @@ def stats(db: Session = Depends(get_db)):
 
 @router.post("", status_code=201)
 def create_item(body: dict = Body(...), u: User = Depends(current_user), db: Session = Depends(get_db)):
-    _mgr(u)
+    _mgr(u, db)
     if not (body.get("name") or "").strip():
         raise HTTPException(status_code=422, detail="กรุณาระบุชื่อสินค้า")
     x = InventoryItem(name=body["name"].strip(), sku=body.get("sku"), category=body.get("category") or "ของใช้",
@@ -67,7 +68,7 @@ def _get(db: Session, iid: str) -> InventoryItem:
 
 @router.put("/{iid}")
 def update_item(iid: str, body: dict = Body(...), u: User = Depends(current_user), db: Session = Depends(get_db)):
-    _mgr(u)
+    _mgr(u, db)
     x = _get(db, iid)
     x.name = body.get("name") or x.name
     x.sku = body.get("sku")
@@ -85,7 +86,7 @@ def update_item(iid: str, body: dict = Body(...), u: User = Depends(current_user
 
 @router.post("/{iid}/movement")
 def movement(iid: str, body: dict = Body(...), u: User = Depends(current_user), db: Session = Depends(get_db)):
-    _mgr(u)
+    _mgr(u, db)
     x = _get(db, iid)
     mtype = body.get("type")
     qty = int(body.get("quantity") or 0)
@@ -103,6 +104,6 @@ def movement(iid: str, body: dict = Body(...), u: User = Depends(current_user), 
 
 @router.delete("/{iid}", status_code=204)
 def delete_item(iid: str, u: User = Depends(current_user), db: Session = Depends(get_db)):
-    _mgr(u)
+    _mgr(u, db)
     db.delete(_get(db, iid))
     db.commit()
