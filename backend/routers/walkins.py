@@ -22,15 +22,16 @@ def _suggest_therapist(db: Session, w: WalkIn) -> dict | None:
         links.setdefault(l.therapist_id, set()).add(l.service_id)
     out = {"callable": False, "suggested": None, "nextFree": None}
     soonest = None
+    rev = _month_revenue_by_therapist(db)  # เกลี่ยรายได้: หมอว่างหลายคน → เลือกคนทำเงินน้อยสุดเดือนนี้
+    free_cands = []
     for t in db.query(Therapist).all():
         skills = links.get(t.id)
         if skills and not all(s in skills for s in sids):
             continue  # ทำบริการนี้ไม่ได้
         if t.current_status == 0 and therapist_conflict(db, t.id, datetime.now(), total_mins,
                                                         exclude_walkin=w.id, exclude_booking=w.booking_id) is None:
-            out["callable"] = True
-            out["suggested"] = {"id": t.id, "displayName": t.display_name}
-            return out
+            free_cands.append(t)
+            continue
         # กำลังบริการ → คำนวณเวลาว่างโดยประมาณจากคิวที่ทำอยู่
         busy = (db.query(WalkIn).join(WalkInItem, WalkInItem.walkin_id == WalkIn.id)
                 .filter(WalkInItem.therapist_id == t.id, WalkIn.status == 1).first())
@@ -40,6 +41,13 @@ def _suggest_therapist(db: Session, w: WalkIn) -> dict | None:
             end = max(end, datetime.now())
             if soonest is None or end < soonest[1]:
                 soonest = (t, end)
+    if free_cands:
+        # คนทำรายได้น้อยสุดเดือนนี้ขึ้นก่อน (เกลี่ยงานให้ทุกคนเท่าๆ กัน)
+        pick = min(free_cands, key=lambda t: rev.get(t.id, 0))
+        out["callable"] = True
+        out["suggested"] = {"id": pick.id, "displayName": pick.display_name,
+                            "monthRevenue": round(rev.get(pick.id, 0), 2)}
+        return out
     if soonest:
         out["nextFree"] = {"id": soonest[0].id, "displayName": soonest[0].display_name,
                            "freeAt": soonest[1].strftime("%H:%M")}
@@ -111,11 +119,25 @@ def _therapist_conflict(db: Session, tid: str, duration_mins: int = 60) -> str |
     return therapist_conflict(db, tid, datetime.now(), duration_mins)
 
 
+def _month_revenue_by_therapist(db: Session) -> dict:
+    """รายได้สะสมเดือนนี้ต่อหมอนวด — ใช้เกลี่ยงาน: คนทำเงินน้อยสุดได้รับเลือกก่อน"""
+    from .. import models
+    month_start = datetime.now().strftime("%Y-%m-01 00:00:00")
+    rev: dict[str, float] = {}
+    rows = (db.query(models.PaymentItem).join(models.Payment, models.Payment.id == models.PaymentItem.payment_id)
+            .filter(models.Payment.paid_at >= month_start).all())
+    for it in rows:
+        if it.therapist_id:
+            rev[it.therapist_id] = rev.get(it.therapist_id, 0) + it.unit_price * it.quantity
+    return rev
+
+
 @router.get("/available-therapists")
 def available_therapists(request: Request, db: Session = Depends(get_db)):
     service_ids = request.query_params.getlist("serviceIds")
     free = db.query(Therapist).filter(Therapist.current_status == 0).all()
     durations = {s.id: s.duration_mins for s in db.query(Service).all()}
+    rev = _month_revenue_by_therapist(db)  # เกลี่ยงาน: เรียงคนรายได้น้อยสุดเดือนนี้ขึ้นก่อน
     out = {}
     for sid in service_ids:
         lst = []
@@ -124,7 +146,10 @@ def available_therapists(request: Request, db: Session = Depends(get_db)):
             # ไม่ได้กำหนดทักษะ = ทำได้ทุกบริการ + ต้องไม่ติดคิว/นัดในช่วงเวลาบริการนี้
             if (not links or any(l.service_id == sid for l in links)) \
                     and _therapist_conflict(db, t.id, durations.get(sid, 60)) is None:
-                lst.append({"id": t.id, "displayName": t.display_name, "code": t.code})
+                lst.append({"id": t.id, "displayName": t.display_name, "code": t.code,
+                            "monthRevenue": round(rev.get(t.id, 0), 2)})
+        # หมอว่างหลายคน → คนทำรายได้น้อยสุดเดือนนี้ขึ้นก่อน (ระบบจัดให้ = เกลี่ยรายได้ทุกคนเท่าๆ กัน)
+        lst.sort(key=lambda x: x["monthRevenue"])
         out[sid] = lst
     return out
 
@@ -169,9 +194,7 @@ def therapist_availability(date: str = "", time: str = "", serviceId: str = "",
 
 @router.post("", status_code=201)
 def create_walkin(body: dict = Body(...), u: User = Depends(current_user), db: Session = Depends(get_db)):
-    # รับลูกค้าเข้าคิว = งานหน้าร้าน (เจ้าของ/ผู้จัดการ/รีเซป/แคชเชียร์) — หมอนวดทำหน้าที่เริ่ม/จบงานเท่านั้น
-    if u.role == "Therapist":
-        raise HTTPException(status_code=403, detail="หมอนวดไม่มีสิทธิ์รับลูกค้าเข้าคิว (ติดต่อเคาน์เตอร์)")
+    # ทุกบทบาทที่มีสิทธิ์ "create" บนหน้าคิวสร้างได้ (รวมหมอนวด — สร้างคิวของตัวเองได้)
     cust = db.get(Customer, body.get("customerId") or "")
     if cust is None:
         raise HTTPException(status_code=404, detail="ไม่พบลูกค้า")

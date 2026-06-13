@@ -228,6 +228,8 @@ async function doLogin(){
   try{
     const d=await API.post('/auth/login',{username:id,password:pw});
     API.setAuth(d);
+    // โหลดสิทธิ์ย่อย "ครั้งเดียว" ตอน login → cache ไว้ ทุกหน้าอ่านจาก cache แบบ sync ไม่ต้องดึงซ้ำ (เว็บไม่ช้า)
+    try{const caps=await API.get('/role/capabilities');if(caps&&typeof caps==='object')localStorage.setItem('th_caps',JSON.stringify(caps));}catch(e){}
     window.location.href='index.html';
   }catch(e){
     err.textContent=(e&&e.message)||'เข้าสู่ระบบไม่สำเร็จ';err.style.display='block';

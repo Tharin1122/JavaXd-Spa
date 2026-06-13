@@ -65,12 +65,13 @@ def _hdr(client, uname, pw="demo1234"):
 def test_backend_blocks_therapist_from_sensitive_data(client):
     """OWASP Broken Access Control: หมอนวดยิง API ตรงต้องโดน 403 — ไม่ใช่แค่ซ่อนเมนู"""
     h = _hdr(client, "aom")
-    assert client.get("/api/report/summary", headers=h).status_code == 403       # รายงานเจ้าของ
+    assert client.get("/api/report/summary", headers=h).status_code == 403       # รายงานเจ้าของ (เงิน)
     assert client.get("/api/report/revenue", headers=h).status_code == 403       # ตัวเลขการเงิน
-    assert client.get("/api/customer", headers=h).status_code == 403             # ฐานลูกค้าทั้งร้าน
     assert client.get("/api/expense", headers=h).status_code == 403              # รายจ่ายร้าน
     assert client.get("/api/user", headers=h).status_code == 403                 # รายชื่อพนักงาน
-    # แต่ดูค่ามือของตัวเองได้
+    # นโยบายใหม่: หมอนวดจัดการลูกค้าได้ (ดูฐานลูกค้าได้) — แต่ข้อมูล "เงินร้าน" ยังกันไว้
+    assert client.get("/api/customer", headers=h).status_code == 200
+    # ดูค่ามือของตัวเองได้
     assert client.get("/api/report/therapist-performance", headers=h).status_code == 200
 
 
@@ -114,14 +115,18 @@ def H_OWNER(client):
     return {"Authorization": "Bearer " + r.json()["accessToken"]}
 
 
-def test_therapist_cannot_manage_bookings_or_money(client, setup_ids):
-    """หมอนวด = ดูคิวตัวเอง + เริ่ม/จบงาน เท่านั้น ห้ามจอง/รับเงิน/เช็คอินหน้าร้าน"""
+def test_therapist_can_queue_but_not_money(client, setup_ids):
+    """นโยบายใหม่: หมอนวดสร้างคิว (walk-in) ตัวเองได้ + จัดการลูกค้าได้ — แต่ห้ามจองล่วงหน้า/รับเงิน (เงินร้าน)"""
     h = _hdr(client, "aom")
+    # สร้างคิว walk-in ของตัวเอง → ได้ (201)
+    r = client.post("/api/walk-in", headers=h, json={"customerId": setup_ids["cust"]["id"],
+        "items": [{"serviceId": setup_ids["svc"]["id"]}]})
+    assert r.status_code == 201
+    # จองล่วงหน้า (งานเคาน์เตอร์) → ห้าม (403)
     assert client.post("/api/booking", headers=h, json={"customerId": setup_ids["cust"]["id"],
         "bookingDate": "2026-12-25", "startTime": "10:00:00",
         "items": [{"serviceId": setup_ids["svc"]["id"]}]}).status_code == 403
-    assert client.post("/api/walk-in", headers=h, json={"customerId": setup_ids["cust"]["id"],
-        "items": [{"serviceId": setup_ids["svc"]["id"]}]}).status_code == 403
+    # รับเงิน = เงินร้าน → ห้าม (403)
     assert client.post("/api/payment", headers=h, json={"walkInId": "x", "paymentMethod": 0}).status_code == 403
 
 

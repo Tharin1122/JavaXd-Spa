@@ -123,7 +123,7 @@ window.PAGE_INIT=function(){
   // ===== สิทธิ์ย่อยรายหน้า (capabilities) =====
   const CAP_PAGES=[['dashboard','แดชบอร์ด'],['bookings','การจอง & คิวงาน'],['pos','ชำระเงิน / POS'],['schedule','ตารางหมอนวด'],['customers','ลูกค้า'],['services','บริการ & คอร์ส'],['staff','พนักงาน'],['finance','การเงิน'],['packages','แพ็กเกจ'],['inventory','สต็อก'],['reports','รายงาน'],['logs','Logs'],['frontdesk','หน้าต้อนรับ'],['myqueue','คิวของฉัน']];
   const CAP_KINDS=[['view','เข้าหน้านี้'],['cards','การ์ดสรุป/ตัวเลขเงิน'],['table','ตาราง/รายการ'],['create','สร้างใหม่'],['edit','แก้ไข'],['pay','รับเงิน'],['money','ดูตัวเลขกำไร/รายจ่าย'],['manage','ลบ/อนุมัติ']];
-  const CAP_ROLES=[['Manager','ผู้จัดการ'],['Reception','รีเซปชั่น'],['Therapist','หมอนวด'],['Cashier','แคชเชียร์']];
+  const CAP_ROLES=[['Owner','เจ้าของร้าน'],['Manager','ผู้จัดการ'],['Reception','รีเซปชั่น'],['Therapist','หมอนวด'],['Cashier','แคชเชียร์']];
   let CAPS={}; let capRole='Manager';
   (async()=>{try{CAPS=await API.get('/role/capabilities')||{};}catch(e){CAPS={};}renderCapSeg();renderCaps();})();
   function renderCapSeg(){document.getElementById('capRoleSeg').innerHTML=CAP_ROLES.map(r=>`<button class="btn btn-sm ${r[0]===capRole?'btn-pri':'btn-ghost'}" onclick="capPick('${r[0]}')">${r[1]}</button>`).join('');}
@@ -187,6 +187,6 @@ window.PAGE_INIT=function(){
 };
 </script>
 <script src="../assets/api.js?v=2"></script>
-<script src="../assets/shell.js?v=13"></script>
+<script src="../assets/shell.js?v=14"></script>
 </body>
 </html>

@@ -36,14 +36,14 @@
     </div>
   </div>
 
-  <div class="stat-grid">
+  <div class="stat-grid" data-cap="money">
     <div class="stat"><div class="row1"><div class="ic ic-green" data-i="money"></div><span class="tt">รายรับรวม</span></div><div class="val">412,950 <small>฿</small></div><div class="row3"><span class="from">215 การจอง</span><span class="trend up">8.3%</span></div></div>
     <div class="stat"><div class="row1"><div class="ic ic-orange" data-i="wallet"></div><span class="tt">รายจ่ายรวม</span></div><div class="val">85,320 <small>฿</small></div><div class="row3"><span class="from">ค่ามือ + ของใช้</span><span class="trend down">2.1%</span></div></div>
     <div class="stat"><div class="row1"><div class="ic ic-purple" data-i="chart"></div><span class="tt">กำไรสุทธิ</span></div><div class="val">327,630 <small>฿</small></div><div class="row3"><span class="from">อัตรากำไร 79%</span><span class="trend up">11%</span></div></div>
     <div class="stat"><div class="row1"><div class="ic ic-blue" data-i="cal"></div><span class="tt">ยอดเฉลี่ย/บิล</span></div><div class="val">1,920 <small>฿</small></div><div class="row3"><span class="from">เพิ่มขึ้นจากเดือนก่อน</span></div></div>
   </div>
 
-  <div class="grid-2 mb24" style="grid-template-columns:1.6fr 1fr">
+  <div class="grid-2 mb24" style="grid-template-columns:1.6fr 1fr" data-cap="money">
     <div class="card card-pad" id="flow">
       <div class="card-h"><h3>รายรับ - รายจ่ายรายวัน</h3>
         <div class="sp flex g16 ac" style="font-size:12.5px">
@@ -60,7 +60,7 @@
   </div>
 
   <div class="grid-2" style="grid-template-columns:1fr 1.2fr" id="bills">
-    <div class="card card-pad">
+    <div class="card card-pad" data-cap="money">
       <div class="card-h"><h3>โครงสร้างรายจ่าย</h3></div>
       <div id="exp"></div>
     </div>
@@ -218,6 +218,6 @@ window.PAGE_INIT=function(){
 };
 </script>
 <script src="../assets/api.js?v=2"></script>
-<script src="../assets/shell.js?v=13"></script>
+<script src="../assets/shell.js?v=14"></script>
 </body>
 </html>

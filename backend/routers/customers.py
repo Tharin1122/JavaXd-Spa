@@ -12,9 +12,7 @@ router = APIRouter(prefix="/api/customer", tags=["customers"], dependencies=[Dep
 @router.get("")
 def list_customers(search: str = "", pageSize: int = 50,
                    u: User = Depends(current_user), db: Session = Depends(get_db)):
-    # หมอนวดไม่มีสิทธิ์ดูฐานลูกค้าทั้งร้าน (เห็นเฉพาะลูกค้าในคิวของตัวเองผ่านหน้า my-queue)
-    if u.role == "Therapist":
-        raise HTTPException(status_code=403, detail="หมอนวดไม่มีสิทธิ์เข้าถึงฐานข้อมูลลูกค้าทั้งร้าน")
+    # ทุกบทบาทดูฐานลูกค้าได้ (หมอนวดจัดการลูกค้าได้ตามนโยบายร้าน) — ข้อมูลการเงินร้านยังกันไว้ที่หน้าอื่น
     q = db.query(Customer)
     if search:
         like = f"%{search}%"

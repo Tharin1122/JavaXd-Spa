@@ -136,19 +136,26 @@ def put_matrix(body: list = Body(...), u: User = Depends(current_user), db: Sess
 def _default_caps():
     # cap keys ต่อหน้า: view=เข้าหน้าได้, cards=การ์ดสรุป, table=ตาราง/รายการ, create=สร้าง, edit=แก้ไข,
     #                   pay=รับเงิน, money=ตัวเลขเงิน/กำไร, manage=จัดการ(ลบ/อนุมัติ)
+    ALL = ["view", "cards", "table", "create", "edit", "pay", "money", "manage"]
+    PAGES = ["dashboard", "bookings", "pos", "schedule", "customers", "services", "staff",
+             "finance", "packages", "inventory", "reports", "logs", "frontdesk", "myqueue"]
     return {
+        # เจ้าของร้าน: ทุกสิทธิ์ทุกหน้า (ติ๊กครบ) — แต่ระบบให้สิทธิ์เต็มเสมอแม้ไม่ระบุ
+        "Owner": {p: ALL[:] for p in PAGES},
+        # ผู้จัดการ: เกือบทุกอย่าง แต่ไม่มี cap "money" ที่ไหนเลย (งบกำไรขาดทุน/ค่ามือหมอนวด) กันอิจฉา
         "Manager": {
-            "dashboard": ["view", "cards", "table", "money", "create"],
+            "dashboard": ["view", "cards", "table", "create"],
             "bookings": ["view", "cards", "table", "create", "edit", "manage"],
             "schedule": ["view", "edit"],
             "customers": ["view", "table", "create", "edit"],
             "services": ["view", "table", "create", "edit"],
             "staff": ["view", "table", "create", "edit"],
-            "finance": ["view", "cards", "table", "money", "create", "manage"], "pos": ["view", "pay", "create"],
+            "finance": ["view", "table"], "pos": ["view", "pay", "create"],
             "packages": ["view", "table", "create"], "inventory": ["view", "table", "create", "edit"],
-            "reports": ["view", "money"], "logs": ["view"], "settings": [], "roles": [],
+            "reports": ["view", "table"], "logs": ["view"], "settings": [], "roles": [],
         },
         "Reception": {
+            "frontdesk": ["view", "cards", "table", "create"],
             "dashboard": ["view", "cards", "table", "create"],
             "bookings": ["view", "cards", "table", "create", "edit", "manage"],
             "schedule": ["view", "edit"],
@@ -156,17 +163,20 @@ def _default_caps():
             "services": ["view", "table"],
             "finance": [], "pos": ["view", "pay", "create"],
         },
+        # หมอนวด: จบงาน+สร้างคิวตัวเองได้ จัดการลูกค้าได้ ดูตาราง — ไม่เห็นเงินร้าน
         "Therapist": {
-            "myqueue": ["view", "edit"],             # คิวของฉัน — กดเริ่ม/จบงานคิวตัวเองได้
-            "dashboard": ["view", "table"],          # เห็นแดชบอร์ด+ตารางคิว แต่ไม่เห็นตัวเลขเงิน/สร้าง
+            "myqueue": ["view", "edit", "create"],
+            "dashboard": ["view", "table"],
             "bookings": ["view", "table"],
             "schedule": ["view"],
+            "customers": ["view", "table", "create", "edit"],
         },
         "Cashier": {
             "dashboard": ["view", "cards", "table"],
             "bookings": ["view", "table"],
             "schedule": ["view"],
             "pos": ["view", "pay", "create"],
+            "customers": ["view", "table"],
             "finance": [],
         },
     }

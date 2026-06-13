@@ -126,10 +126,12 @@ const ROLE_MENU={
    cap keys: view=เข้าหน้า, cards=การ์ดสรุป, table=ตาราง, create=สร้าง, edit=แก้, pay=รับเงิน, money=ตัวเลขเงิน, manage=ลบ/อนุมัติ */
 const CAP_ALL=['view','cards','table','create','edit','pay','money','manage'];
 const CAP_DEFAULT={
-  Manager:{dashboard:['view','cards','table','money','create'],bookings:['view','cards','table','create','edit','manage'],schedule:['view','edit'],customers:['view','table','create','edit'],services:['view','table','create','edit'],staff:['view','table','create','edit'],finance:['view','cards','table','money','create','manage'],pos:['view','pay','create'],packages:['view','table','create'],inventory:['view','table','create','edit'],reports:['view','money'],logs:['view'],settings:[],roles:[]},
-  Reception:{frontdesk:['view','cards','table','create'],dashboard:['view','cards','table','create'],bookings:['view','cards','table','create','edit','manage'],schedule:['view','edit'],customers:['view','table','create','edit'],services:['view','table'],finance:[],pos:['view','pay','create']},
-  Therapist:{myqueue:['view','edit'],dashboard:['view','table'],bookings:['view','table'],schedule:['view']},
-  Cashier:{dashboard:['view','cards','table'],bookings:['view','table'],schedule:['view'],pos:['view','pay','create'],finance:[]},
+  // ผู้จัดการ: ทำงานได้เกือบทุกอย่าง แต่ไม่เห็น "เงิน" (money) ที่ไหนเลย — งบกำไรขาดทุน/ค่ามือหมอนวด กันอิจฉา
+  Manager:{dashboard:['view','cards','table','create'],bookings:['view','cards','table','create','edit','manage'],pos:['view','pay','create'],schedule:['view','edit'],customers:['view','table','create','edit'],services:['view','table','create','edit'],staff:['view','table','create','edit'],finance:['view','table'],packages:['view','table','create'],inventory:['view','table','create','edit'],reports:['view','table'],logs:['view'],settings:[],roles:[]},
+  Reception:{frontdesk:['view','cards','table','create'],dashboard:['view','cards','table','create'],bookings:['view','cards','table','create','edit','manage'],schedule:['view','edit'],customers:['view','table','create','edit'],services:['view','table'],pos:['view','pay','create'],finance:[]},
+  // หมอนวด: จบงาน+สร้างคิวตัวเองได้ (ปุ่มสร้างอยู่หน้าคิวของฉัน) จัดการลูกค้าได้ ดูตารางคิว — ไม่เห็นเงินร้าน
+  Therapist:{myqueue:['view','edit','create'],dashboard:['view','table'],bookings:['view','table'],schedule:['view'],customers:['view','table','create','edit']},
+  Cashier:{dashboard:['view','cards','table'],bookings:['view','table'],schedule:['view'],pos:['view','pay','create'],customers:['view','table'],finance:[]},
 };
 let ROLE_CAPS=null;try{ROLE_CAPS=JSON.parse(localStorage.getItem('th_caps')||'null');}catch(e){}
 if(!ROLE_CAPS)ROLE_CAPS=CAP_DEFAULT;
@@ -137,6 +139,28 @@ function pageCaps(pk){if(ROLE_KEY==='Owner')return CAP_ALL.slice();return ((ROLE
 window.CAN=(cap)=>pageCaps(PAGE).includes(cap);            // ความสามารถบนหน้าปัจจุบัน
 window.CANPAGE=(pk)=>ROLE_KEY==='Owner'||pageCaps(pk).includes('view');
 window.PERM={role:ROLE_KEY,caps:ROLE_CAPS,can:window.CAN,canPage:window.CANPAGE,pageCaps};
+
+/* ===== ฉีด CSS สิทธิ์เข้า <head> "ก่อน" body render → ปุ่มที่ไม่มีสิทธิ์ไม่ถูกวาดออกมาเลย (ไม่กระพริบ) =====
+   อ่านสิทธิ์จาก cache (localStorage) แบบ sync — โหลดครั้งเดียวตอน login ไม่ดึงทุกหน้า */
+window.PERM_VIEWONLY=false;
+(function injectPermCSS(){
+  if(ROLE_KEY==='Owner')return;
+  const caps=pageCaps(PAGE);
+  const blockedFiles=NAV.filter(n=>!window.CANPAGE(n.k)).map(n=>(n.h||'').split('/').pop()).filter(Boolean);
+  const missing=CAP_ALL.filter(c=>!caps.includes(c));
+  let rules=missing.map(c=>`[data-cap~="${c}"]{display:none!important}`).join('');
+  rules+=blockedFiles.map(f=>`.content a[href$="${f}"],.content [onclick*="${f}"]{display:none!important}`).join('');
+  const viewOnly=caps.includes('view')&&!['create','edit','manage','pay'].some(c=>caps.includes(c));
+  window.PERM_VIEWONLY=viewOnly;
+  if(viewOnly){
+    const keep=':not([onclick*="closeModal"]):not([onclick*="closeBooking"]):not([data-keep])';
+    rules+=`.content .btn-pri${keep},.content .btn-soft${keep},.content .btn-primary${keep},`
+         +`#genModal .modal-f .btn-pri${keep},#genModal .modal-f .btn-soft${keep},#bkModal .btn-pri${keep},`
+         +`.content .row-act button[onclick*="del"],.content .row-act button[title*="แก้"],.content button[onclick*="edit"]{display:none!important}`;
+  }
+  const st=document.createElement('style');st.id='permcss';st.textContent=rules;
+  (document.head||document.documentElement).appendChild(st);
+})();
 
 function navList(){
   const keys=ROLE_MENU[ROLE_KEY];
@@ -697,53 +721,21 @@ try{
   }
 }catch(e){}
 if(window.PAGE_INIT)window.PAGE_INIT();
-// ===== บังคับสิทธิ์แบบ SYNC (ก่อน paint → ไม่กระพริบ, ไม่เด้ง) =====
+// ===== บล็อกหน้าที่ไม่มีสิทธิ์ + แบนเนอร์ดูอย่างเดียว (CSS ซ่อนปุ่มทำไปแล้วใน injectPermCSS ก่อน paint) =====
 (function enforcePermissions(){
   try{
-    if(ROLE_KEY==='Owner')return; // เจ้าของร้านเข้าถึงทุกอย่าง
-    const caps=pageCaps(PAGE);
-    // 1) ไม่มีสิทธิ์ดูหน้านี้เลย → บล็อก (เกิดได้กรณีพิมพ์ URL ตรง — เมนูซ่อนให้แล้ว)
+    if(ROLE_KEY==='Owner')return;
     if(!window.CANPAGE(PAGE)){
       const c=document.querySelector('.content');
       if(c)c.innerHTML='<div style="text-align:center;padding:80px 20px;color:var(--ink-3)"><div style="font-size:46px;margin-bottom:10px">🔒</div><div style="font-size:18px;font-weight:700;color:var(--ink)">ไม่มีสิทธิ์เข้าถึงหน้านี้</div><div style="margin-top:6px;font-size:13.5px">บัญชีของคุณ ('+roleThai(ROLE_KEY)+') ไม่ได้รับสิทธิ์เข้าหน้านี้</div></div>';
       const home=ROLE_HOME[ROLE_KEY]||'index.html';
       setTimeout(()=>location.href=(window.BASE||'')+home,1500);
-      refreshCapsCache();return;
+      return;
     }
-    // ===== ซ่อนทุกอย่างด้วย CSS ล้วน (มีผลก่อน paint + ครอบคลุม modal ที่เปิดทีหลัง) =====
-    // ไม่ใช้ MutationObserver แล้ว → ไม่กระพริบ + ไม่หน่วงตอนทำรายการ
-    const blockedFiles=NAV.filter(n=>!window.CANPAGE(n.k)).map(n=>(n.h||'').split('/').pop()).filter(Boolean);
-    const missing=CAP_ALL.filter(c=>!caps.includes(c));
-    const css=document.createElement('style');css.id='permcss';
-    let rules=missing.map(c=>`[data-cap~="${c}"]{display:none!important}`).join('');
-    rules+=blockedFiles.map(f=>`.content a[href$="${f}"],.content [onclick*="${f}"]{display:none!important}`).join('');
-    // ดูอย่างเดียว (มี view แต่ไม่มี create/edit/manage/pay) → ซ่อนปุ่มหลัก (action) ทั้งหน้า+modal+booking modal
-    // เก็บปุ่ม ghost (ปิด/ยกเลิก) ไว้ และปุ่มที่ติด data-keep (เช่นปุ่ม "ปิด") ไม่โดนซ่อน
-    const viewOnly=caps.includes('view')&&!['create','edit','manage','pay'].some(c=>caps.includes(c));
-    if(viewOnly){
-      // กันปุ่มปิด/ยกเลิก modal โดนซ่อน (บางอันเป็น btn-pri) → ยกเว้น onclick ที่ปิด modal
-      const keepClose=':not([onclick*="closeModal"]):not([onclick*="closeBooking"]):not([data-keep])';
-      rules+=`.content .btn-pri${keepClose},.content .btn-soft${keepClose},.content .btn-primary${keepClose},`
-           +`#genModal .modal-f .btn-pri${keepClose},#genModal .modal-f .btn-soft${keepClose},`
-           +`#bkModal .btn-pri${keepClose},`
-           +`.content .row-act button[onclick*="del"],.content .row-act button[title*="แก้"],.content button[onclick*="edit"]`
-           +`{display:none!important}`;
-    }
-    css.textContent=rules;document.head.appendChild(css);
-
-    if(viewOnly){
+    if(window.PERM_VIEWONLY){
       const c=document.querySelector('.content');
       if(c)c.insertAdjacentHTML('afterbegin','<div style="background:#fff8ec;border:1px solid #f0d9a8;color:#8a6d1a;border-radius:11px;padding:9px 14px;margin-bottom:14px;font-size:13px;font-weight:600">👁️ โหมดดูอย่างเดียว — บัญชี '+roleThai(ROLE_KEY)+' ดูข้อมูลหน้านี้ได้ แต่แก้ไข/สร้างไม่ได้</div>');
     }
-    refreshCapsCache();
   }catch(e){console.warn('perm enforce',e);}
-
-  // อัปเดต cache capability จาก backend (สำหรับการนำทางครั้งถัดไป) — ถ้า Owner เปลี่ยนสิทธิ์ จะมีผลหน้าถัดไป
-  async function refreshCapsCache(){
-    try{const fresh=await API.get('/role/capabilities');
-      if(fresh&&typeof fresh==='object'){const cur=localStorage.getItem('th_caps');const next=JSON.stringify(fresh);
-        if(cur!==next){localStorage.setItem('th_caps',next);}}
-    }catch(e){}
-  }
 })();
 })();

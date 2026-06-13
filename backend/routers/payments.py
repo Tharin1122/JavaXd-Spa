@@ -57,9 +57,14 @@ def payment_qr(amount: float, db: Session = Depends(get_db)):
     if amount <= 0:
         raise HTTPException(status_code=422, detail="จำนวนเงินต้องมากกว่า 0")
     settings = kv_get(db, "settings", {})
-    pp_id = settings.get("promptpayId") or "0812345678"   # demo — ตั้งของจริงในหน้าตั้งค่า
+    DEMO_PP = "0000000000"  # เลขที่เป็นไปไม่ได้ที่จะลงทะเบียนพร้อมเพย์ → สแกนได้แต่ธนาคารเด้ง = ไม่มีใครเสียเงินจริง
+    raw = (settings.get("promptpayId") or "").strip()
+    digits = re.sub(r"\D", "", raw)
+    # ถ้าเบอร์ที่ตั้งไว้ผิดรูปแบบ (ไม่ใช่ 10/13 หลัก) → ใช้เลขเดโม่แทน ไม่ทำให้ POS พัง
+    valid = (len(digits) == 10 and digits.startswith("0")) or len(digits) == 13
+    pp_id = digits if valid else DEMO_PP
     return {"payload": promptpay_payload(pp_id, amount), "promptpayId": pp_id,
-            "amount": amount, "isDemo": not settings.get("promptpayId")}
+            "amount": amount, "isDemo": (not valid)}
 
 
 def payment_out(db: Session, p: Payment) -> dict:
