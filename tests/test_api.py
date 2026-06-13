@@ -57,6 +57,45 @@ def test_role_demo_users(client):
         assert client.post("/api/auth/login", data={"username": u, "password": "demo1234"}).status_code == 200
 
 
+def _hdr(client, uname, pw="demo1234"):
+    r = client.post("/api/auth/login", data={"username": uname, "password": pw})
+    return {"Authorization": "Bearer " + r.json()["accessToken"]}
+
+
+def test_backend_blocks_therapist_from_sensitive_data(client):
+    """OWASP Broken Access Control: หมอนวดยิง API ตรงต้องโดน 403 — ไม่ใช่แค่ซ่อนเมนู"""
+    h = _hdr(client, "aom")
+    assert client.get("/api/report/summary", headers=h).status_code == 403       # รายงานเจ้าของ
+    assert client.get("/api/report/revenue", headers=h).status_code == 403       # ตัวเลขการเงิน
+    assert client.get("/api/customer", headers=h).status_code == 403             # ฐานลูกค้าทั้งร้าน
+    assert client.get("/api/expense", headers=h).status_code == 403              # รายจ่ายร้าน
+    assert client.get("/api/user", headers=h).status_code == 403                 # รายชื่อพนักงาน
+    # แต่ดูค่ามือของตัวเองได้
+    assert client.get("/api/report/therapist-performance", headers=h).status_code == 200
+
+
+def test_backend_blocks_cashier_from_owner_data(client):
+    h = _hdr(client, "cashier")
+    assert client.get("/api/report/summary", headers=h).status_code == 403       # รายงานเชิงลึก
+    assert client.get("/api/user", headers=h).status_code == 403
+    assert client.get("/api/expense", headers=h).status_code == 403
+    # แต่ดูตัวเลขการเงินหน้า POS/ปิดยอดได้
+    assert client.get("/api/report/revenue", headers=h).status_code == 200
+
+
+def test_only_owner_creates_user(client):
+    rec = _hdr(client, "reception")
+    # รีเซปสร้างบัญชี Owner ใหม่ไม่ได้ (กันยกระดับสิทธิ์ตัวเอง)
+    assert client.post("/api/user", headers=rec,
+                       json={"username": "hacker", "password": "x123456", "role": "Owner"}).status_code == 403
+    assert client.get("/api/user", headers=rec).status_code == 403  # รีเซปดูรายชื่อผู้ใช้ทั้งหมดไม่ได้
+
+
+def test_only_owner_edits_role_matrix(client):
+    assert client.put("/api/role/matrix", headers=_hdr(client, "manager"), json=[]).status_code == 403
+    assert client.put("/api/role/matrix", headers=_hdr(client, "reception"), json=[]).status_code == 403
+
+
 # ---------- master data ----------
 
 def test_seeded_services_categories(client, H):

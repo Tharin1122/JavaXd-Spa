@@ -168,12 +168,16 @@ def user_roles():
 
 
 @router.get("/user")
-def list_users(db: Session = Depends(get_db)):
+def list_users(u: User = Depends(current_user), db: Session = Depends(get_db)):
+    if u.role not in ("Owner", "Manager"):
+        raise HTTPException(status_code=403, detail="เฉพาะเจ้าของ/ผู้จัดการดูรายชื่อผู้ใช้ได้")
     return [user_payload(x) for x in db.query(User).all()]
 
 
 @router.post("/user", status_code=201)
-def create_user(body: dict = Body(...), db: Session = Depends(get_db)):
+def create_user(body: dict = Body(...), u: User = Depends(current_user), db: Session = Depends(get_db)):
+    if u.role != "Owner":
+        raise HTTPException(status_code=403, detail="เฉพาะเจ้าของร้านเพิ่มผู้ใช้ได้")
     uname = (body.get("username") or "").strip()
     if len(uname) < 3:
         raise HTTPException(status_code=422, detail="username อย่างน้อย 3 ตัว")
@@ -190,7 +194,10 @@ def create_user(body: dict = Body(...), db: Session = Depends(get_db)):
 
 
 @router.post("/user/{uid}/set-password")
-def set_password(uid: str, body: dict = Body(...), db: Session = Depends(get_db)):
+def set_password(uid: str, body: dict = Body(...), u: User = Depends(current_user), db: Session = Depends(get_db)):
+    # เจ้าของตั้งรหัสให้ใครก็ได้ / คนอื่นตั้งได้เฉพาะของตัวเอง
+    if u.role != "Owner" and u.id != uid:
+        raise HTTPException(status_code=403, detail="ตั้งรหัสผ่านได้เฉพาะของบัญชีตัวเอง")
     usr = db.get(User, uid)
     if usr is None:
         raise HTTPException(status_code=404, detail="ไม่พบผู้ใช้")

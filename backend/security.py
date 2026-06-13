@@ -56,3 +56,14 @@ def current_user(token: str = Depends(oauth2), db: Session = Depends(get_db)) ->
     if u is None:
         raise err
     return u
+
+
+def require_roles(*allowed: str):
+    """ด่านบังคับสิทธิ์ฝั่ง backend — เดิม API เปิดโล่งทุก role (Broken Access Control)
+    หมอนวด/แคชเชียร์ยิงตรงดึงเงินเดือน/บิล/รายชื่อพนักงานได้ → ปิดที่นี่ ไม่ใช่แค่ซ่อนเมนู"""
+    def _guard(u: User = Depends(current_user)) -> User:
+        if u.role not in allowed:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                                detail="บัญชีของคุณไม่มีสิทธิ์เข้าถึงข้อมูลส่วนนี้")
+        return u
+    return _guard
