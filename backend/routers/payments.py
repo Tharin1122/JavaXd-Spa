@@ -82,6 +82,9 @@ def list_payments(pageSize: int = 50, offset: int = 0, db: Session = Depends(get
 
 @router.post("", status_code=201)
 def create_payment(body: dict = Body(...), u: User = Depends(current_user), db: Session = Depends(get_db)):
+    # รับเงิน/ออกบิล = เจ้าของ/ผู้จัดการ/รีเซป/แคชเชียร์ — หมอนวดไม่แตะเงิน
+    if u.role == "Therapist":
+        raise HTTPException(status_code=403, detail="หมอนวดไม่มีสิทธิ์รับชำระเงิน")
     p = Payment(receipt_no=next_receipt_no(db), is_demo=u.is_demo, payment_method=int(body.get("paymentMethod") or 0),
                 discount_amount=float(body.get("discountAmount") or 0),
                 paid_amount=float(body.get("paidAmount") or 0))

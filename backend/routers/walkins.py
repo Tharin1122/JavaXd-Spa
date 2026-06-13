@@ -169,6 +169,9 @@ def therapist_availability(date: str = "", time: str = "", serviceId: str = "",
 
 @router.post("", status_code=201)
 def create_walkin(body: dict = Body(...), u: User = Depends(current_user), db: Session = Depends(get_db)):
+    # รับลูกค้าเข้าคิว = งานหน้าร้าน (เจ้าของ/ผู้จัดการ/รีเซป/แคชเชียร์) — หมอนวดทำหน้าที่เริ่ม/จบงานเท่านั้น
+    if u.role == "Therapist":
+        raise HTTPException(status_code=403, detail="หมอนวดไม่มีสิทธิ์รับลูกค้าเข้าคิว (ติดต่อเคาน์เตอร์)")
     cust = db.get(Customer, body.get("customerId") or "")
     if cust is None:
         raise HTTPException(status_code=404, detail="ไม่พบลูกค้า")

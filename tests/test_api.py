@@ -96,6 +96,17 @@ def test_only_owner_edits_role_matrix(client):
     assert client.put("/api/role/matrix", headers=_hdr(client, "reception"), json=[]).status_code == 403
 
 
+def test_therapist_cannot_manage_bookings_or_money(client, setup_ids):
+    """หมอนวด = ดูคิวตัวเอง + เริ่ม/จบงาน เท่านั้น ห้ามจอง/รับเงิน/เช็คอินหน้าร้าน"""
+    h = _hdr(client, "aom")
+    assert client.post("/api/booking", headers=h, json={"customerId": setup_ids["cust"]["id"],
+        "bookingDate": "2026-12-25", "startTime": "10:00:00",
+        "items": [{"serviceId": setup_ids["svc"]["id"]}]}).status_code == 403
+    assert client.post("/api/walk-in", headers=h, json={"customerId": setup_ids["cust"]["id"],
+        "items": [{"serviceId": setup_ids["svc"]["id"]}]}).status_code == 403
+    assert client.post("/api/payment", headers=h, json={"walkInId": "x", "paymentMethod": 0}).status_code == 403
+
+
 # ---------- master data ----------
 
 def test_seeded_services_categories(client, H):
