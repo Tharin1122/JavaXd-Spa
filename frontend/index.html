@@ -13,8 +13,8 @@
   <div class="layout-2">
    <!-- ===== MAIN COLUMN ===== -->
    <div>
-    <!-- stat cards -->
-    <div class="stat-grid">
+    <!-- stat cards (ตัวเลขเงิน/สรุป — สิทธิ์ย่อย: cards) -->
+    <div class="stat-grid" data-cap="cards">
       <div class="stat">
         <div class="row1"><div class="ic ic-purple" data-i="cal"></div><span class="tt">รายรับวันนี้</span><span class="info" data-i="info"></span></div>
         <div class="val">18,750 <small>บาท</small></div>
@@ -39,7 +39,7 @@
 
     <!-- donut + finance -->
     <div class="grid-2 mb24">
-      <div class="card card-pad">
+      <div class="card card-pad" data-cap="table">
         <div class="card-h"><h3>ภาพรวมการจองวันนี้</h3></div>
         <div class="donut-wrap">
           <div class="donut" id="donut"><div class="ctr"><b>27</b><span>ทั้งหมด</span></div></div>
@@ -51,7 +51,7 @@
           </div>
         </div>
       </div>
-      <div class="card card-pad">
+      <div class="card card-pad" data-cap="money">
         <div class="card-h"><h3>รายรับ - รายจ่าย (เดือนนี้)</h3></div>
         <table class="tbl" style="margin-top:-4px">
           <thead><tr><th>รายการ</th><th style="text-align:right">จำนวนเงิน (บาท)</th></tr></thead>
@@ -68,8 +68,8 @@
       </div>
     </div>
 
-    <!-- schedule timeline -->
-    <div class="card card-pad mb24">
+    <!-- schedule timeline (ตารางคิว — สิทธิ์ย่อย: table) -->
+    <div class="card card-pad mb24" data-cap="table">
       <div class="card-h">
         <h3>ตารางงานหมอนวดวันนี้</h3>
         <div class="flex ac g12" style="margin-left:14px">
@@ -88,7 +88,7 @@
 
     <!-- quick actions -->
     <div class="quick">
-      <a onclick="BS.openBooking()"><span class="qi" style="background:var(--brand-soft);color:var(--brand)" data-i="cal"></span><div><div class="qt">สร้างการจอง</div><div class="qs">เพิ่มการจองใหม่</div></div></a>
+      <a onclick="BS.openBooking()" data-cap="create"><span class="qi" style="background:var(--brand-soft);color:var(--brand)" data-i="cal"></span><div><div class="qt">สร้างการจอง</div><div class="qs">เพิ่มการจองใหม่</div></div></a>
       <a href="pages/customers.html"><span class="qi" style="background:var(--green-soft);color:#178a61" data-i="users"></span><div><div class="qt">ลูกค้าใหม่</div><div class="qs">เพิ่มลูกค้า</div></div></a>
       <a href="pages/bookings.html#queue"><span class="qi" style="background:var(--orange-soft);color:#b9791a" data-i="flow"></span><div><div class="qt">จัดการคิว</div><div class="qs">คิวรอ / กำลังให้บริการ</div></div></a>
       <a href="pages/finance.html"><span class="qi" style="background:var(--blue-soft);color:#2477cc" data-i="chart"></span><div><div class="qt">รายงานการเงิน</div><div class="qs">รายรับ - รายจ่าย</div></div></a>
@@ -124,7 +124,7 @@
 window.PAGE_INIT=function(){
   /* ===== แดชบอร์ดตามบทบาท =====
      Manager เห็นเฉพาะหน้างาน: ซ่อนรายรับเดือน/กำไรสุทธิ (ของเจ้าของ) → โชว์สต็อกใกล้หมดแทน
-     (Reception/Therapist/Cashier ไม่ถึงหน้านี้ — shell.js?v=9 พาไปหน้าของตัวเอง) */
+     (Reception/Therapist/Cashier ไม่ถึงหน้านี้ — shell.js?v=11 พาไปหน้าของตัวเอง) */
   if(window.ROLE_KEY==='Manager'){
     try{
       const h1=document.querySelector('.topbar h1');if(h1)h1.textContent='แดชบอร์ดผู้จัดการ (หน้างานวันนี้)';
@@ -436,6 +436,6 @@ async function loadDashboardReal(){
 </script>
 <script src="assets/api.js?v=2"></script>
 <script src="assets/gantt.js?v=3h"></script>
-<script src="assets/shell.js?v=9"></script>
+<script src="assets/shell.js?v=11"></script>
 </body>
 </html>

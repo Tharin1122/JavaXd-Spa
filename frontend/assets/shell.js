@@ -121,24 +121,53 @@ const ROLE_MENU={
   Therapist:['myqueue'],
   Cashier:['pos','bookings'],
 };
+/* ===== ระบบสิทธิ์ย่อยรายหน้า (capabilities) — อ่านจาก cache แบบ sync ก่อน render =====
+   ฆ่าการกระพริบ: ทุกอย่างคำนวณก่อน DOM แสดงผล + ไม่ render ปุ่มที่ไม่มีสิทธิ์ตั้งแต่แรก
+   cap keys: view=เข้าหน้า, cards=การ์ดสรุป, table=ตาราง, create=สร้าง, edit=แก้, pay=รับเงิน, money=ตัวเลขเงิน, manage=ลบ/อนุมัติ */
+const CAP_ALL=['view','cards','table','create','edit','pay','money','manage'];
+const CAP_DEFAULT={
+  Manager:{dashboard:['view','cards','table','money','create'],bookings:['view','cards','table','create','edit','manage'],schedule:['view','edit'],customers:['view','table','create','edit'],services:['view','table','create','edit'],staff:['view','table','create','edit'],finance:['view','cards','table','money'],pos:['view','pay','create'],packages:['view','table','create'],inventory:['view','table','create','edit'],reports:['view','money'],logs:['view'],settings:[],roles:[]},
+  Reception:{frontdesk:['view','cards','table','create'],dashboard:['view','cards','table','create'],bookings:['view','cards','table','create','edit','manage'],schedule:['view','edit'],customers:['view','table','create','edit'],services:['view','table'],finance:[],pos:['view','pay','create']},
+  Therapist:{myqueue:['view','edit'],dashboard:['view','table'],bookings:['view','table'],schedule:['view']},
+  Cashier:{dashboard:['view','cards','table'],bookings:['view','table'],schedule:['view'],pos:['view','pay','create'],finance:[]},
+};
+let ROLE_CAPS=null;try{ROLE_CAPS=JSON.parse(localStorage.getItem('th_caps')||'null');}catch(e){}
+if(!ROLE_CAPS)ROLE_CAPS=CAP_DEFAULT;
+function pageCaps(pk){if(ROLE_KEY==='Owner')return CAP_ALL.slice();return ((ROLE_CAPS[ROLE_KEY]||{})[pk]||[]);}
+window.CAN=(cap)=>pageCaps(PAGE).includes(cap);            // ความสามารถบนหน้าปัจจุบัน
+window.CANPAGE=(pk)=>ROLE_KEY==='Owner'||pageCaps(pk).includes('view');
+window.PERM={role:ROLE_KEY,caps:ROLE_CAPS,can:window.CAN,canPage:window.CANPAGE,pageCaps};
+
 function navList(){
   const keys=ROLE_MENU[ROLE_KEY];
   if(!keys)return NAV;
   return keys.map(k=>NAV_EXTRA[k]||NAV.find(n=>n.k===k)).filter(Boolean);
 }
-/* เข้า index.html แต่บทบาทมีหน้าแรกเฉพาะ → พาไปหน้าของตัวเอง */
+/* เข้า index.html — เด้งไปหน้าแรกเฉพาะตอน "ไม่มีสิทธิ์ดูแดชบอร์ด" (ถ้ามีสิทธิ์ดู ให้อยู่ได้จริง) */
 (function(){
   const home=ROLE_HOME[ROLE_KEY]||'index.html';
   const cur=location.pathname.split('/').pop()||'index.html';
-  if(cur==='index.html'&&home!=='index.html')location.replace(B+home);
+  if(cur==='index.html'&&home!=='index.html'&&!window.CANPAGE('dashboard'))location.replace(B+home);
 })();
 
 function navHtml(){
-  return navList().map(n=>{
+  // เมนูสร้างจากสิทธิ์จริงตั้งแต่แรก (sync) — ไม่ต้อง rebuild ทีหลัง จึงไม่กระพริบ
+  // หน้าแรกเฉพาะบทบาท (frontdesk/myqueue) โชว์เสมอ + ทุกหน้าที่ capability ให้ view
+  let list;
+  if(ROLE_KEY==='Owner'){list=NAV;}
+  else{
+    const extras=(ROLE_MENU[ROLE_KEY]||[]).map(k=>NAV_EXTRA[k]).filter(Boolean);
+    const allowed=NAV.filter(n=>window.CANPAGE(n.k));
+    list=[...extras,...allowed.filter(n=>!extras.some(e=>e.k===n.k))];
+  }
+  return list.map(n=>{
     const act=n.k===PAGE?' active':'';
     const hasSub=n.sub&&n.k===PAGE;
+    // หน้าที่ดูได้อย่างเดียว (ไม่มี create/edit/manage/pay) → ติดป้าย 👁
+    const caps=pageCaps(n.k);const viewOnly=ROLE_KEY!=='Owner'&&caps.includes('view')&&!['create','edit','manage','pay'].some(c=>caps.includes(c));
+    const eye=viewOnly?' <span style="font-size:9px;opacity:.6" title="ดูอย่างเดียว">👁</span>':'';
     const sub=n.sub?`<div class="nav-sub${hasSub?' show':''}">${n.sub.map(s=>`<a href="${B}${s.h}">${s.t}</a>`).join('')}</div>`:'';
-    return `<a href="${B}${n.h}" class="nav-item${act}${hasSub?' open':''}">${svg(n.ic)}<span>${n.t}</span>${n.sub?`<span class="chev" onclick="return BS.navToggle(event,this)" title="เปิด/ปิดเมนูย่อย">${svg('chev')}</span>`:''}</a>${sub}`;
+    return `<a href="${B}${n.h}" class="nav-item${act}${hasSub?' open':''}">${svg(n.ic)}<span>${n.t}${eye}</span>${n.sub?`<span class="chev" onclick="return BS.navToggle(event,this)" title="เปิด/ปิดเมนูย่อย">${svg('chev')}</span>`:''}</a>${sub}`;
   }).join('');
 }
 
@@ -201,7 +230,7 @@ function topbar(title){
     <h1>${title}</h1>
     <div class="search" style="position:relative">${svg('search')}<input id="gsearch" placeholder="ค้นหาลูกค้า การจอง หมอนวด หรือเมนู..." autocomplete="off"><div class="gs-drop" id="gsdrop"></div></div>
     <div class="top-actions">
-      ${['Therapist','Cashier'].includes(ROLE_KEY)?'':`<button class="btn-primary" onclick="BS.openBooking()">${svg('plus')} สร้างการจอง</button>`}
+      ${window.CAN&&window.CAN('create')||ROLE_KEY==='Owner'?`<button class="btn-primary" data-cap="create" onclick="BS.openBooking()">${svg('plus')} สร้างการจอง</button>`:''}
       <button class="icon-btn" id="bellBtn" onclick="BS.notifPanel()">${svg('bell')}<span class="dot">5</span></button>
       <button class="icon-btn" onclick="BS.chatPanel()">${svg('chat')}</button>
       <span style="cursor:pointer;display:inline-flex" onclick="BS.accountPanel()" title="บัญชีผู้ใช้">${av(curName(),42,true,curUser().avatarUrl)}</span>
@@ -668,81 +697,50 @@ try{
   }
 }catch(e){}
 if(window.PAGE_INIT)window.PAGE_INIT();
-
-// ===== บังคับใช้สิทธิ์ตาม Role (ซ่อนเมนู + บล็อกหน้าที่ไม่มีสิทธิ์) =====
-(async function enforcePermissions(){
+// ===== บังคับสิทธิ์แบบ SYNC (ก่อน paint → ไม่กระพริบ, ไม่เด้ง) =====
+(function enforcePermissions(){
   try{
-    const u=(window.API&&API.getUser&&API.getUser())||{};
-    const role=(u.roles&&u.roles[0])||u.role||'';
-    if(role==='Owner')return; // เจ้าของร้านเข้าถึงทุกอย่าง
-    const COL={Manager:1,Reception:2,Therapist:3,Cashier:4}[role];
-    if(COL==null)return; // role ที่ไม่อยู่ใน matrix → ไม่จำกัด (กันล็อกตัวเองออก)
-    // โมดูล → หน้า (ตรงกับตารางสิทธิ์ในหน้า roles · คอลัมน์ที่ASCII 5 = Cashier ใช้ DEF ฝั่ง client เท่านั้น)
-    const MODS=[['index.html'],['bookings.html','schedule.html'],['customers.html'],['services.html'],
-      ['staff.html'],['finance.html','pos.html'],['packages.html'],['inventory.html'],
-      ['reports.html','logs.html'],['settings.html','roles.html','subscription.html']];
-    const DEF=[[1,1,1,2,0],[1,1,1,2,2],[1,1,1,0,0],[1,1,2,0,0],[1,1,0,0,0],[1,1,2,0,1],[1,1,2,0,0],[1,1,1,0,0],[1,1,0,0,0],[1,0,0,0,0]];
-    let M=DEF;
-    try{const saved=await API.get('/role/matrix');if(Array.isArray(saved)&&saved.length)M=saved;}catch(e){}
-    const lvl={};MODS.forEach((pages,i)=>{const v=(M[i]&&M[i][COL]!=null)?M[i][COL]:DEF[i][COL];pages.forEach(p=>lvl[p]=v);});
-    // แคชเชียร์: โมดูลการเงินรวม POS ไว้ด้วยกัน แต่หน้า "การเงินรวมของร้าน" (กำไร/รายจ่าย) ไม่ใช่งานเก็บเงินหน้าร้าน → ซ่อน
-    if(role==='Cashier')lvl['finance.html']=0;
-    // ===== เมนูข้างต้องตรงกับตารางสิทธิ์จริง (matrix) — ไม่ใช่รายการตายตัว =====
-    // บั๊กเดิม: Owner ตั้ง matrix ว่า "ดูได้" แต่เมนู hardcode ไม่โชว์ → สิทธิ์บอกให้เห็นแต่มองไม่เห็น
-    try{
-      const fileOf=h=>(h||'').split('/').pop();
-      const extras=(ROLE_MENU[role]||[]).map(k=>NAV_EXTRA[k]).filter(Boolean);          // หน้าแรกเฉพาะบทบาท (front-desk/my-queue)
-      const allowed=NAV.filter(n=>lvl[fileOf(n.h)]>0);                                   // ทุกหน้าที่ matrix ให้สิทธิ์ ≥ ดูได้
-      const items=[...extras,...allowed.filter(n=>!extras.some(e=>e.k===n.k))];
-      const navEl=document.querySelector('.side .nav');
-      if(navEl&&items.length){
-        navEl.innerHTML=items.map(n=>{
-          const act=n.k===PAGE?' active':'';const hasSub=n.sub&&n.k===PAGE;
-          const view=lvl[fileOf(n.h)]===2?' <span style="font-size:9.5px;opacity:.65">👁</span>':'';
-          const sub=n.sub?`<div class="nav-sub${hasSub?' show':''}">${n.sub.map(s=>`<a href="${B}${s.h}">${s.t}</a>`).join('')}</div>`:'';
-          return `<a href="${B}${n.h}" class="nav-item${act}${hasSub?' open':''}">${svg(n.ic)}<span>${n.t}${view}</span>${n.sub?`<span class="chev" onclick="return BS.navToggle(event,this)" title="เปิด/ปิดเมนูย่อย">${svg('chev')}</span>`:''}</a>${sub}`;
-        }).join('');
-      }
-    }catch(e){console.warn('nav rebuild',e);}
-    // ===== ซ่อนปุ่ม/ลิงก์ "ทุกที่" ที่พาไปหน้าซึ่ง role นี้ไม่มีสิทธิ์ — ไม่ใช่แค่เมนู =====
-    // หลัก UX: ปุ่มที่กดแล้วเจอ "ไม่มีสิทธิ์" ไม่ควรมีให้เห็นตั้งแต่แรก
-    const blockedTarget=(s)=>{const m=(s||'').match(/([a-z0-9-]+\.html)/i);return !!(m&&lvl[m[1]]===0);};
-    const hideBlockedLinks=(root)=>{
-      (root||document).querySelectorAll('a[href],[onclick]').forEach(el=>{
-        if(el.closest('.side'))return; // เมนูจัดการไปแล้วด้านบน
-        if(blockedTarget(el.getAttribute('href'))||blockedTarget(el.getAttribute('onclick')))el.style.display='none';
-      });
-    };
-    hideBlockedLinks(document);
-    // เนื้อหา/modal ที่ render ทีหลังจาก API ก็ต้องโดนกวาดด้วย (debounce กันถี่เกิน)
-    let _hbTmr=null;
-    new MutationObserver(()=>{clearTimeout(_hbTmr);_hbTmr=setTimeout(()=>hideBlockedLinks(document),120);})
-      .observe(document.body,{childList:true,subtree:true});
-    // หน้าปัจจุบัน — บล็อกถ้าไม่มีสิทธิ์
-    const cur=(location.pathname.split('/').pop()||'index.html');
-    if(lvl[cur]===0){
-      document.querySelectorAll('.content').forEach(c=>c.innerHTML='<div style="text-align:center;padding:80px 20px;color:var(--ink-3)"><div style="font-size:46px;margin-bottom:10px">🔒</div><div style="font-size:18px;font-weight:700;color:var(--ink)">ไม่มีสิทธิ์เข้าถึงหน้านี้</div><div style="margin-top:6px;font-size:13.5px">บัญชีของคุณ ('+roleThai(role)+') ไม่ได้รับสิทธิ์เข้าหน้านี้ · กำลังพากลับแดชบอร์ด…</div></div>');
-      BS.toast&&BS.toast('คุณไม่มีสิทธิ์เข้าถึงหน้านี้','x');
-      setTimeout(()=>location.href=(window.BASE||'')+'index.html',1400);
-    } else if(lvl[cur]===2){
-      // ดูได้อย่างเดียว → แบนเนอร์ + ซ่อนปุ่ม action ทั้งหน้า "รวมถึงใน modal ที่เปิดทีหลัง"
-      try{const c=document.querySelector('.content');if(c)c.insertAdjacentHTML('afterbegin','<div style="background:#fff8ec;border:1px solid #f0d9a8;color:#8a6d1a;border-radius:11px;padding:9px 14px;margin-bottom:14px;font-size:13px;font-weight:500">👁️ โหมดดูอย่างเดียว — บัญชี '+roleThai(role)+' ดูข้อมูลได้ แต่แก้ไขไม่ได้</div>');
-        // คำ action แรง (ใช้กับปุ่มทุกชนิด) vs คำที่ใช้กับปุ่มหลักเท่านั้น (กันซ่อนปุ่ม "ยกเลิก/ปิด" ของ modal)
-        const ACT_HARD=/เรียกคิว|ยกเลิกคิว|ลบ|อนุมัติ|จบงาน|เริ่มให้บริการ|เริ่มงาน|รับเข้า|เบิกออก|ขาย & ออกใบเสร็จ|มาแล้ว|ไม่มาตามนัด|เก็บเงิน|ไปชำระเงิน/;
-        const ACT_MAIN=/สร้าง|เพิ่ม|บันทึก|แก้ไข|รับชำระ|ออกบิล|ยืนยัน|เริ่ม|ขาย|เช็คอิน|ใช้ตัวกรอง|โหลด.*เข้าบิล/;
-        const hideActs=(root)=>{
-          (root||document).querySelectorAll('button,.btn').forEach(b=>{
-            const t=b.textContent||'';
-            const isMain=b.classList.contains('btn-pri')||b.classList.contains('btn-soft')||b.classList.contains('btn-primary');
-            if(ACT_HARD.test(t)||(isMain&&ACT_MAIN.test(t)))b.style.display='none';
-          });
-        };
-        hideActs(document);
-        let _vaTmr=null;
-        new MutationObserver(()=>{clearTimeout(_vaTmr);_vaTmr=setTimeout(()=>hideActs(document),120);})
-          .observe(document.body,{childList:true,subtree:true});
-      }catch(e){}
+    if(ROLE_KEY==='Owner')return; // เจ้าของร้านเข้าถึงทุกอย่าง
+    const caps=pageCaps(PAGE);
+    // 1) ไม่มีสิทธิ์ดูหน้านี้เลย → บล็อก (เกิดได้กรณีพิมพ์ URL ตรง — เมนูซ่อนให้แล้ว)
+    if(!window.CANPAGE(PAGE)){
+      const c=document.querySelector('.content');
+      if(c)c.innerHTML='<div style="text-align:center;padding:80px 20px;color:var(--ink-3)"><div style="font-size:46px;margin-bottom:10px">🔒</div><div style="font-size:18px;font-weight:700;color:var(--ink)">ไม่มีสิทธิ์เข้าถึงหน้านี้</div><div style="margin-top:6px;font-size:13.5px">บัญชีของคุณ ('+roleThai(ROLE_KEY)+') ไม่ได้รับสิทธิ์เข้าหน้านี้</div></div>';
+      const home=ROLE_HOME[ROLE_KEY]||'index.html';
+      setTimeout(()=>location.href=(window.BASE||'')+home,1500);
+      refreshCapsCache();return;
     }
+    // 2) ลิงก์/ปุ่มลัดที่พาไปหน้าที่ไม่มีสิทธิ์ → ฉีด CSS ซ่อนทันที (ก่อน paint)
+    const blockedFiles=NAV.filter(n=>!window.CANPAGE(n.k)).map(n=>(n.h||'').split('/').pop()).filter(Boolean);
+    // 3) ความสามารถย่อยที่ "ไม่มี" บนหน้านี้ → ซ่อน element ที่ติด data-cap ตัวนั้น
+    const missing=CAP_ALL.filter(c=>!caps.includes(c));
+    const css=document.createElement('style');css.id='permcss';
+    let rules=missing.map(c=>`[data-cap~="${c}"]{display:none!important}`).join('');
+    rules+=blockedFiles.map(f=>`.content a[href$="${f}"],.content [onclick*="${f}"]{display:none!important}`).join('');
+    // ดูอย่างเดียว (มี view แต่ไม่มี create/edit/manage/pay) → ซ่อนปุ่ม action ที่ไม่ได้ติด data-cap ด้วยคำสำคัญ (safety net)
+    const viewOnly=caps.includes('view')&&!['create','edit','manage','pay'].some(c=>caps.includes(c));
+    css.textContent=rules;document.head.appendChild(css);
+
+    if(viewOnly){
+      const c=document.querySelector('.content');
+      if(c)c.insertAdjacentHTML('afterbegin','<div style="background:#fff8ec;border:1px solid #f0d9a8;color:#8a6d1a;border-radius:11px;padding:9px 14px;margin-bottom:14px;font-size:13px;font-weight:600">👁️ โหมดดูอย่างเดียว — บัญชี '+roleThai(ROLE_KEY)+' ดูข้อมูลหน้านี้ได้ แต่แก้ไข/สร้างไม่ได้</div>');
+      const ACT=/เรียกคิว|ยกเลิกคิว|^ลบ| ลบ|อนุมัติ|จบงาน|เริ่มให้บริการ|เริ่มงาน|รับเข้า|เบิกออก|ขาย|มาแล้ว|ไม่มาตามนัด|เก็บเงิน|ไปชำระเงิน|สร้าง|เพิ่ม|บันทึก|แก้ไข|รับชำระ|ออกบิล|ยืนยัน|เช็คอิน/;
+      const hideActs=(root)=>{(root||document).querySelectorAll('.content button,.content .btn, .modal button,.modal .btn').forEach(b=>{
+        const t=(b.textContent||'').trim();if(!t||b.dataset.cap)return;
+        const isMain=b.classList.contains('btn-pri')||b.classList.contains('btn-soft')||b.classList.contains('btn-primary');
+        if(isMain&&ACT.test(t))b.style.display='none';});};
+      hideActs(document);
+      let tmr=null;new MutationObserver(()=>{clearTimeout(tmr);tmr=setTimeout(()=>hideActs(document),60);}).observe(document.body,{childList:true,subtree:true});
+    }
+    refreshCapsCache();
   }catch(e){console.warn('perm enforce',e);}
+
+  // อัปเดต cache capability จาก backend (สำหรับการนำทางครั้งถัดไป) — ถ้า Owner เปลี่ยนสิทธิ์ จะมีผลหน้าถัดไป
+  async function refreshCapsCache(){
+    try{const fresh=await API.get('/role/capabilities');
+      if(fresh&&typeof fresh==='object'){const cur=localStorage.getItem('th_caps');const next=JSON.stringify(fresh);
+        if(cur!==next){localStorage.setItem('th_caps',next);}}
+    }catch(e){}
+  }
 })();
 })();

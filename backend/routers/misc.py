@@ -131,6 +131,63 @@ def put_matrix(body: list = Body(...), u: User = Depends(current_user), db: Sess
     return body
 
 
+# ===== สิทธิ์ย่อยรายหน้า (capabilities) — Owner ตั้งว่าแต่ละบทบาทเห็น/ทำอะไรย่อยได้บ้าง =====
+# ค่าเริ่มต้น: ตรงกับ role_matrix เดิม แต่ละเอียดขึ้น (เห็นการ์ด/เห็นตาราง/สร้าง/แก้/ฯลฯ)
+def _default_caps():
+    # cap keys ต่อหน้า: view=เข้าหน้าได้, cards=การ์ดสรุป, table=ตาราง/รายการ, create=สร้าง, edit=แก้ไข,
+    #                   pay=รับเงิน, money=ตัวเลขเงิน/กำไร, manage=จัดการ(ลบ/อนุมัติ)
+    return {
+        "Manager": {
+            "dashboard": ["view", "cards", "table", "money", "create"],
+            "bookings": ["view", "cards", "table", "create", "edit", "manage"],
+            "schedule": ["view", "edit"],
+            "customers": ["view", "table", "create", "edit"],
+            "services": ["view", "table", "create", "edit"],
+            "staff": ["view", "table", "create", "edit"],
+            "finance": ["view", "cards", "table", "money"], "pos": ["view", "pay", "create"],
+            "packages": ["view", "table", "create"], "inventory": ["view", "table", "create", "edit"],
+            "reports": ["view", "money"], "logs": ["view"], "settings": [], "roles": [],
+        },
+        "Reception": {
+            "dashboard": ["view", "cards", "table", "create"],
+            "bookings": ["view", "cards", "table", "create", "edit", "manage"],
+            "schedule": ["view", "edit"],
+            "customers": ["view", "table", "create", "edit"],
+            "services": ["view", "table"],
+            "finance": [], "pos": ["view", "pay", "create"],
+        },
+        "Therapist": {
+            "myqueue": ["view", "edit"],             # คิวของฉัน — กดเริ่ม/จบงานคิวตัวเองได้
+            "dashboard": ["view", "table"],          # เห็นแดชบอร์ด+ตารางคิว แต่ไม่เห็นตัวเลขเงิน/สร้าง
+            "bookings": ["view", "table"],
+            "schedule": ["view"],
+        },
+        "Cashier": {
+            "dashboard": ["view", "cards", "table"],
+            "bookings": ["view", "table"],
+            "schedule": ["view"],
+            "pos": ["view", "pay", "create"],
+            "finance": [],
+        },
+    }
+
+
+@router.get("/role/capabilities")
+def get_caps(db: Session = Depends(get_db)):
+    saved = kv_get(db, "role_caps", None)
+    return saved if saved else _default_caps()
+
+
+@router.put("/role/capabilities")
+def put_caps(body: dict = Body(...), u: User = Depends(current_user), db: Session = Depends(get_db)):
+    if u.role != "Owner":
+        raise HTTPException(status_code=403, detail="เฉพาะเจ้าของร้านตั้งสิทธิ์ได้")
+    kv_set(db, "role_caps", body)
+    log_event(db, "RoleCapsUpdated", "Settings", None, "บันทึกสิทธิ์ย่อยรายหน้า", u.display_name)
+    db.commit()
+    return body
+
+
 @router.get("/subscription")
 def get_subscription(db: Session = Depends(get_db)):
     return kv_get(db, "subscription", {"planType": "Free", "trialEndsAt": None})

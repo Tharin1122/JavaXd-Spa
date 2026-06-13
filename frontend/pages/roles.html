@@ -41,6 +41,14 @@
     <table class="tbl matrix" id="matrix"></table>
   </div>
 
+  <div class="card card-pad" style="margin-top:18px">
+    <div class="card-h"><h3>สิทธิ์ย่อยรายหน้า (เห็นอะไร / ทำอะไรได้)</h3>
+      <span class="sp sub" style="font-size:12px">เลือกบทบาท แล้วติ๊กสิ่งที่เห็น/ทำได้ในแต่ละหน้า</span>
+      <button class="btn btn-pri btn-sm" onclick="saveCaps()">บันทึกสิทธิ์ย่อย</button></div>
+    <div class="flex ac g8 wrap" style="margin:6px 0 14px" id="capRoleSeg"></div>
+    <div id="capGrid"></div>
+  </div>
+
   <div id="previewBar"><span>กำลังดูเมนูในมุมมอง: <b id="pvRole"></b> · เมนูที่ไม่มีสิทธิ์ถูกซ่อน · สีจาง = ดูได้อย่างเดียว</span><button onclick="exitPreview()">ออกจากมุมมองตัวอย่าง</button></div>
 </template>
 
@@ -112,6 +120,28 @@ window.PAGE_INIT=function(){
     finally{b.disabled=false;}
   };
 
+  // ===== สิทธิ์ย่อยรายหน้า (capabilities) =====
+  const CAP_PAGES=[['dashboard','แดชบอร์ด'],['bookings','การจอง & คิวงาน'],['pos','ชำระเงิน / POS'],['schedule','ตารางหมอนวด'],['customers','ลูกค้า'],['services','บริการ & คอร์ส'],['staff','พนักงาน'],['finance','การเงิน'],['packages','แพ็กเกจ'],['inventory','สต็อก'],['reports','รายงาน'],['logs','Logs'],['frontdesk','หน้าต้อนรับ'],['myqueue','คิวของฉัน']];
+  const CAP_KINDS=[['view','เข้าหน้านี้'],['cards','การ์ดสรุป/ตัวเลขเงิน'],['table','ตาราง/รายการ'],['create','สร้างใหม่'],['edit','แก้ไข'],['pay','รับเงิน'],['money','ดูตัวเลขกำไร/รายจ่าย'],['manage','ลบ/อนุมัติ']];
+  const CAP_ROLES=[['Manager','ผู้จัดการ'],['Reception','รีเซปชั่น'],['Therapist','หมอนวด'],['Cashier','แคชเชียร์']];
+  let CAPS={}; let capRole='Manager';
+  (async()=>{try{CAPS=await API.get('/role/capabilities')||{};}catch(e){CAPS={};}renderCapSeg();renderCaps();})();
+  function renderCapSeg(){document.getElementById('capRoleSeg').innerHTML=CAP_ROLES.map(r=>`<button class="btn btn-sm ${r[0]===capRole?'btn-pri':'btn-ghost'}" onclick="capPick('${r[0]}')">${r[1]}</button>`).join('');}
+  window.capPick=function(r){capRole=r;renderCapSeg();renderCaps();};
+  function renderCaps(){
+    const rc=CAPS[capRole]||{};
+    document.getElementById('capGrid').innerHTML=
+      '<table class="tbl"><thead><tr><th style="width:160px">หน้า</th>'+CAP_KINDS.map(k=>`<th style="text-align:center;font-size:11.5px">${k[1]}</th>`).join('')+'</tr></thead><tbody>'+
+      CAP_PAGES.map(p=>{const have=rc[p[0]]||[];return `<tr><td style="font-weight:500;font-size:13px">${p[1]}</td>`+
+        CAP_KINDS.map(k=>`<td style="text-align:center"><input type="checkbox" class="capcb" data-pg="${p[0]}" data-k="${k[0]}" ${have.includes(k[0])?'checked':''} style="width:16px;height:16px;accent-color:var(--brand)"></td>`).join('')+'</tr>';}).join('')+'</tbody></table>';
+  }
+  window.saveCaps=async function(){
+    const rc={};document.querySelectorAll('.capcb:checked').forEach(c=>{(rc[c.dataset.pg]=rc[c.dataset.pg]||[]).push(c.dataset.k);});
+    CAPS[capRole]=rc;
+    try{await API.put('/role/capabilities',CAPS);BS.toast('บันทึกสิทธิ์ย่อยของ '+capRole+' แล้ว — มีผลเมื่อผู้ใช้เปิดหน้าใหม่','check');}
+    catch(e){BS.toast('บันทึกไม่สำเร็จ: '+(e.message||''),'x');}
+  };
+
   /* เลือก role → ไฮไลต์คอลัมน์ในตาราง + ปุ่มทดลองมุมมอง */
   function selectRole(i){
     selRole=i;
@@ -157,6 +187,6 @@ window.PAGE_INIT=function(){
 };
 </script>
 <script src="../assets/api.js?v=2"></script>
-<script src="../assets/shell.js?v=9"></script>
+<script src="../assets/shell.js?v=11"></script>
 </body>
 </html>

@@ -45,7 +45,7 @@ ul{padding-left:20px}li{margin:4px 0}
   </div>
 
   <h2><span class="n">1</span>หลักการ Role-based UI</h2>
-  <div class="sub">แต่ละบทบาทเห็น "หน้าที่ออกแบบมาเฉพาะงานตัวเอง" — เมนู, หน้าแรก และปุ่มต่างกันตั้งแต่ต้น (ไม่ใช่หน้าเดียวกันแล้วซ่อนปุ่ม) · กำหนดใน <code>assets/shell.js?v=9</code> (ROLE_MENU / ROLE_HOME)</div>
+  <div class="sub">แต่ละบทบาทเห็น "หน้าที่ออกแบบมาเฉพาะงานตัวเอง" — เมนู, หน้าแรก และปุ่มต่างกันตั้งแต่ต้น (ไม่ใช่หน้าเดียวกันแล้วซ่อนปุ่ม) · กำหนดใน <code>assets/shell.js?v=11</code> (ROLE_MENU / ROLE_HOME)</div>
   <div class="card">
     <table>
       <thead><tr><th>บทบาท (roles[0] ใน JWT)</th><th>หน้าแรกหลัง Login</th><th>เมนูที่เห็น</th><th>สิ่งที่ไม่เห็น</th></tr></thead>
@@ -69,7 +69,7 @@ ul{padding-left:20px}li{margin:4px 0}
       <li><code>API.setAuth({accessToken,refreshToken,user})</code> เก็บใน localStorage (<code>th_token</code>, <code>th_user</code>)</li>
       <li>SignalR auto-connect เมื่อมี token · event ที่หน้าจอฟัง: <code class="ev">QueueUpdated</code> <code class="ev">BookingUpdated</code> <code class="ev">TherapistStatusChanged</code> <code class="ev">RoomStatusChanged</code> <code class="ev">DashboardSnapshot</code> <code class="ev">CleaningCheck</code> — ยิง event เหล่านี้ทุกครั้งที่ข้อมูลเปลี่ยน หน้าจอจะรีโหลดเอง</li>
     </ul>
-    <h3>ปุ่มกลางใน Topbar / Sidebar (shell.js?v=9)</h3>
+    <h3>ปุ่มกลางใน Topbar / Sidebar (shell.js?v=11)</h3>
     <table>
       <thead><tr><th>ปุ่ม</th><th>ทำอะไร</th><th>Endpoint</th></tr></thead>
       <tbody>
@@ -139,7 +139,7 @@ ul{padding-left:20px}li{margin:4px 0}
     <ul>
       <li>เมนูเหลือ 2: <b>POS</b> (หน้าแรก) + <b>การจอง&amp;คิว</b> (ดูคิวรอชำระ · โหมดดูอย่างเดียว)</li>
       <li>แถวบน POS = คิวที่จบบริการรอชำระ → กดโหลดเข้าบิล · ปุ่มรับชำระ → สร้างใบเสร็จ → modal พรีวิวใบกำกับภาษี (VAT 7%) → พิมพ์</li>
-      <li>สิทธิ์ใน matrix client คอลัมน์ที่ 5 (ดู <code>shell.js?v=9 DEF</code>) — backend ควรเพิ่ม Cashier ใน role matrix ฝั่ง server ด้วย</li>
+      <li>สิทธิ์ใน matrix client คอลัมน์ที่ 5 (ดู <code>shell.js?v=11 DEF</code>) — backend ควรเพิ่ม Cashier ใน role matrix ฝั่ง server ด้วย</li>
     </ul>
   </div>
 
