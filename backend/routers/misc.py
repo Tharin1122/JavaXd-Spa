@@ -144,7 +144,7 @@ def _default_caps():
             "customers": ["view", "table", "create", "edit"],
             "services": ["view", "table", "create", "edit"],
             "staff": ["view", "table", "create", "edit"],
-            "finance": ["view", "cards", "table", "money"], "pos": ["view", "pay", "create"],
+            "finance": ["view", "cards", "table", "money", "create", "manage"], "pos": ["view", "pay", "create"],
             "packages": ["view", "table", "create"], "inventory": ["view", "table", "create", "edit"],
             "reports": ["view", "money"], "logs": ["view"], "settings": [], "roles": [],
         },

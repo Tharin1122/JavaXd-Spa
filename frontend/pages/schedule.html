@@ -8,9 +8,11 @@
 <link rel="stylesheet" href="../assets/theme.css?v=1">
 <style>
 .g-name{min-width:210px}
-.summ{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px}
-@media(max-width:1100px){.summ{grid-template-columns:repeat(2,1fr)}}
-.scard{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow);display:flex;align-items:center;gap:12px}
+.summ{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;margin-bottom:20px}
+@media(max-width:1100px){.summ{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.scard{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow);display:flex;align-items:center;gap:12px;min-width:0;overflow:hidden}
+.scard>div:not(.util){min-width:0}
+.scard>div:not(.util)>div:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .scard .util{margin-left:auto;text-align:right}
 .scard .util b{font-size:18px}
 .ring{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;flex:0 0 46px}
@@ -151,6 +153,6 @@ window.PAGE_INIT=function(){
 </script>
 <script src="../assets/gantt.js?v=3h"></script>
 <script src="../assets/api.js?v=2"></script>
-<script src="../assets/shell.js?v=11"></script>
+<script src="../assets/shell.js?v=12"></script>
 </body>
 </html>

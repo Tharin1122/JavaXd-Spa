@@ -126,7 +126,7 @@ const ROLE_MENU={
    cap keys: view=เข้าหน้า, cards=การ์ดสรุป, table=ตาราง, create=สร้าง, edit=แก้, pay=รับเงิน, money=ตัวเลขเงิน, manage=ลบ/อนุมัติ */
 const CAP_ALL=['view','cards','table','create','edit','pay','money','manage'];
 const CAP_DEFAULT={
-  Manager:{dashboard:['view','cards','table','money','create'],bookings:['view','cards','table','create','edit','manage'],schedule:['view','edit'],customers:['view','table','create','edit'],services:['view','table','create','edit'],staff:['view','table','create','edit'],finance:['view','cards','table','money'],pos:['view','pay','create'],packages:['view','table','create'],inventory:['view','table','create','edit'],reports:['view','money'],logs:['view'],settings:[],roles:[]},
+  Manager:{dashboard:['view','cards','table','money','create'],bookings:['view','cards','table','create','edit','manage'],schedule:['view','edit'],customers:['view','table','create','edit'],services:['view','table','create','edit'],staff:['view','table','create','edit'],finance:['view','cards','table','money','create','manage'],pos:['view','pay','create'],packages:['view','table','create'],inventory:['view','table','create','edit'],reports:['view','money'],logs:['view'],settings:[],roles:[]},
   Reception:{frontdesk:['view','cards','table','create'],dashboard:['view','cards','table','create'],bookings:['view','cards','table','create','edit','manage'],schedule:['view','edit'],customers:['view','table','create','edit'],services:['view','table'],finance:[],pos:['view','pay','create']},
   Therapist:{myqueue:['view','edit'],dashboard:['view','table'],bookings:['view','table'],schedule:['view']},
   Cashier:{dashboard:['view','cards','table'],bookings:['view','table'],schedule:['view'],pos:['view','pay','create'],finance:[]},

@@ -17,6 +17,11 @@
 .pm-row:last-child{border-bottom:none}
 .pm-ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;flex:0 0 38px}
 .flowtag{display:inline-flex;align-items:center;gap:6px;font-weight:600}
+/* กันล้นจอแนวนอน: คอลัมน์ grid หดได้ + ตารางใหญ่เลื่อนในกล่องตัวเอง */
+.grid-2{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)!important}
+#bills{grid-template-columns:minmax(0,1fr) minmax(0,1.2fr)!important}
+.grid-2>.card,#bills>.card{min-width:0;overflow:hidden}
+@media(max-width:900px){.grid-2,#bills{grid-template-columns:1fr!important}}
 </style>
 </head>
 <body data-title="การเงิน">
@@ -213,6 +218,6 @@ window.PAGE_INIT=function(){
 };
 </script>
 <script src="../assets/api.js?v=2"></script>
-<script src="../assets/shell.js?v=11"></script>
+<script src="../assets/shell.js?v=12"></script>
 </body>
 </html>

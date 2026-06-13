@@ -1,7 +1,12 @@
 """Public API — หน้าจองออนไลน์สำหรับลูกค้าร้าน (ไม่ต้อง login)
 ขอบเขตจำกัด: ดูบริการ + สร้างการจองเท่านั้น มี rate limit กัน spam"""
+import os
 import re
 import time
+
+# บนเว็บเดโม่ตั้ง DEMO_MODE=1 → จองออนไลน์/ลูกค้าที่ไม่มี login ติดธง is_demo (ถูกล้างทุกชั่วโมง)
+# บนร้านจริง (ไม่ตั้ง) → เป็นข้อมูลถาวรตามปกติ
+DEMO_MODE = bool(os.environ.get("DEMO_MODE"))
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
@@ -69,11 +74,11 @@ def public_booking(request: Request, body: dict = Body(...), db: Session = Depen
     name = clean_name(name)
     cust = db.query(Customer).filter(Customer.phone.like(f"%{phone[-9:]}")).first()
     if cust is None:
-        cust = Customer(display_name=name, phone=phone, notes="สมัครผ่านจองผ่านเว็บ")
+        cust = Customer(display_name=name, phone=phone, notes="สมัครผ่านจองผ่านเว็บ", is_demo=DEMO_MODE)
         db.add(cust)
         db.flush()
     # หน้าเว็บสัญญาว่า "ยืนยันทันที" → สถานะเป็นยืนยันแล้ว (1) ไม่ใช่รอดำเนินการ
-    b = Booking(booking_no=next_booking_no(db), customer_id=cust.id,
+    b = Booking(booking_no=next_booking_no(db), customer_id=cust.id, is_demo=DEMO_MODE,
                 booking_date=date, start_time=t + ":00", status=1)
     b.items.append(BookingItem(service_id=svc.id, therapist_selection_mode=1, price=svc.price))
     db.add(b)
