@@ -38,6 +38,12 @@ def kv_set(db: Session, key: str, value) -> None:
         row.value = json.dumps(value, ensure_ascii=False)
 
 
+def clean_name(s: str | None) -> str:
+    """กัน Stored XSS: ตัดอักขระ HTML ออกจากชื่อที่ผู้ใช้กรอก (ชื่อ/หมายเหตุ) ก่อนเก็บลง DB"""
+    import re
+    return re.sub(r"[<>]", "", (s or "").strip())[:120]
+
+
 def next_queue_no(db: Session) -> str:
     today = datetime.now().strftime("%Y-%m-%d")
     n = db.query(WalkIn).filter(WalkIn.arrival_time >= today + " 00:00:00").count()

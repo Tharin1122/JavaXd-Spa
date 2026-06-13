@@ -96,6 +96,24 @@ def test_only_owner_edits_role_matrix(client):
     assert client.put("/api/role/matrix", headers=_hdr(client, "reception"), json=[]).status_code == 403
 
 
+def test_public_booking_strips_xss(client, setup_ids):
+    """Stored XSS: ชื่อที่มี <script> ต้องถูกตัดแท็กก่อนเก็บ (กันสคริปต์รันในจอพนักงาน)"""
+    from datetime import datetime, timedelta
+    tmr = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+    r = client.post("/api/public/booking", json={
+        "serviceId": setup_ids["svc"]["id"], "date": tmr, "time": "15:45",
+        "name": "<script>alert(1)</script>ทดสอบ", "phone": "0890001239"})
+    assert r.status_code == 201
+    # ตามไปดูว่าชื่อที่เก็บไม่มี < >
+    cust = client.get("/api/customer?search=0890001239", headers=H_OWNER(client)).json()["items"]
+    assert cust and "<" not in cust[0]["displayName"] and ">" not in cust[0]["displayName"]
+
+
+def H_OWNER(client):
+    r = client.post("/api/auth/login", data={"username": "owner", "password": "Owner@2468"})
+    return {"Authorization": "Bearer " + r.json()["accessToken"]}
+
+
 def test_therapist_cannot_manage_bookings_or_money(client, setup_ids):
     """หมอนวด = ดูคิวตัวเอง + เริ่ม/จบงาน เท่านั้น ห้ามจอง/รับเงิน/เช็คอินหน้าร้าน"""
     h = _hdr(client, "aom")

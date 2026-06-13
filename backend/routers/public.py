@@ -7,7 +7,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..helpers import kv_get, log_event, next_booking_no
+from ..helpers import clean_name, kv_get, log_event, next_booking_no
 from ..models import Booking, BookingItem, Customer, Service, ServiceCategory
 
 router = APIRouter(prefix="/api/public", tags=["public"])
@@ -66,9 +66,10 @@ def public_booking(request: Request, body: dict = Body(...), db: Session = Depen
     if when < datetime.now() + timedelta(minutes=30):
         raise HTTPException(status_code=422, detail="เวลานี้ผ่านไปแล้วหรือกระชั้นเกินไป — เลือกเวลาล่วงหน้าอย่างน้อย 30 นาที")
 
+    name = clean_name(name)
     cust = db.query(Customer).filter(Customer.phone.like(f"%{phone[-9:]}")).first()
     if cust is None:
-        cust = Customer(display_name=name, phone=phone, notes="สมัครผ่านจองออนไลน์")
+        cust = Customer(display_name=name, phone=phone, notes="สมัครผ่านจองผ่านเว็บ")
         db.add(cust)
         db.flush()
     # หน้าเว็บสัญญาว่า "ยืนยันทันที" → สถานะเป็นยืนยันแล้ว (1) ไม่ใช่รอดำเนินการ

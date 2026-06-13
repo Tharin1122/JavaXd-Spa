@@ -25,10 +25,11 @@ def list_customers(search: str = "", pageSize: int = 50,
 
 @router.post("", status_code=201)
 def create_customer(body: dict = Body(...), u: User = Depends(current_user), db: Session = Depends(get_db)):
-    name = (body.get("displayName") or "").strip()
+    from ..helpers import clean_name
+    name = clean_name(body.get("displayName"))
     if not name:
         raise HTTPException(status_code=422, detail="กรุณาระบุชื่อลูกค้า")
-    c = Customer(display_name=name, phone=body.get("phone"), notes=body.get("notes"), is_demo=u.is_demo)
+    c = Customer(display_name=name, phone=body.get("phone"), notes=clean_name(body.get("notes")) or None, is_demo=u.is_demo)
     db.add(c)
     log_event(db, "CustomerCreated", "Customer", name, "เพิ่มลูกค้าใหม่", u.display_name)
     db.commit()
